@@ -1,8 +1,15 @@
-# 1up-github-actions
-Composite GitHub Actions used as shared builds by 1up-team
+# AWS ECS Gradle Build Steps
+> spring-media/1up-github-actions@build-ecs-gradle
 
-## Actions
-> ℹ️ Each action is created on a separate branch, referenced using `@` sign
+Composite GitHub Action used as a shared build by 1up-team for
+Java/Gradle projects deployed to AWS ECS
 
-### AWS ECS Gradle Build Steps
-[spring-media/1up-github-actions@build-ecs-gradle](https://github.com/spring-media/1up-github-actions/blob/build-ecs-gradle/action.yml)
+### Steps Summary
+- setup
+- Gradle build
+- Docker build
+- Sonar analysis when `sonar-token` is passed
+- on master
+    - deploy Docker image
+    - AWS ECS release
+    - status report
