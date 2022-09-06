@@ -9,4 +9,4 @@ Composite GitHub Actions used as shared builds by 1up-team
 > the branch protection rules
 
 ### AWS ECS Gradle Build Steps
-[spring-media/1up-github-actions@build-ecs-gradle](https://github.com/spring-media/1up-github-actions/blob/build-ecs-gradle/action.yml)
+[spring-media/1up-github-actions@build-ecs-gradle](https://github.com/spring-media/1up-github-actions/tree/build-ecs-gradle)
