@@ -7,9 +7,11 @@ Java/Gradle projects deployed to AWS ECS
 ### Steps Summary
 - setup
 - Gradle build
-- Docker build
+- Docker build and Push
 - Sonar analysis when `sonar-token` is passed
+- STG deploy (if parameter passed)
 - on master
     - deploy Docker image
     - AWS ECS release
+    - terraform changes are applied (if any)
     - status report
