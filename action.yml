@@ -198,18 +198,18 @@ runs:
       shell: bash
 
     - name: Release - push Docker image
-      if: ${{ inputs.staging }} == 'true' || github.ref == 'refs/heads/master'
+      if: ${{ inputs.staging == 'true' }} || github.ref == 'refs/heads/master'
       run: docker push ${{ env.DOCKER_IMAGE }}
       shell: bash
 
     # release STG
     - name: Release to STG
-      if: ${{ inputs.staging }} == 'true'
+      if: ${{ inputs.staging == 'true' }}
       run: echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
       shell: bash
 
     - name: Release to STG
-      if: ${{ inputs.staging }} == 'true'
+      if: ${{ inputs.staging == 'true' }}
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
