@@ -16,7 +16,7 @@ inputs:
   gradle-cmd:
     description: 'Gradle wrapper run command'
     required: false
-    default: './gradlew --info clean build'
+    default: './gradlew --no-daemon --info clean build'
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
@@ -45,15 +45,13 @@ inputs:
     required: false
 
   staging:
-    description: 'if staging environment exists'
+    description: 'Release to staging environment'
     required: false
-    default: false
+    default: 'false'
 
 runs:
   using: composite
   steps:
-
-    # setup
     - name: run terraform changes
       run: echo "things are doing"
       shell: bash
@@ -62,7 +60,7 @@ runs:
       run: echo " ${{ steps.infrastructure-changes.outputs.terraform }}"
       shell: bash
 
-    - name: Setup Steps
+    - name: Setup - echo
       run: echo -e "🔔\n🔔\n🔔       S E T U P       \n🔔\n🔔"
       shell: bash
 
@@ -109,11 +107,11 @@ runs:
           terraform:
             - 'terraform/**'
 
-    - name: terraform - setup
+    - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       uses: hashicorp/setup-terraform@v2
 
-    - name: terraform - setup git
+    - name: Setup - terraform - git
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       run: |
         git config --local --remove-section http."https://github.com/"
@@ -135,8 +133,7 @@ runs:
       shell: bash
 
 
-    # gradle build
-    - name: Build Steps
+    - name: Build - echo
       run: echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
       shell: bash
 
@@ -158,8 +155,7 @@ runs:
         comment_mode: off
 
 
-    # sonar build
-    - name: Build - Sonar - Steps
+    - name: Build - Sonar - echo
       if: inputs.sonar-token
       run: echo -e "🔔\n🔔       S O N A R       \n🔔"
       shell: bash
@@ -180,14 +176,8 @@ runs:
       run: ./gradlew sonarqube --info
       shell: bash
 
-    - name: Build - Sonar - Steps
-      if: inputs.sonar-token
-      run: echo -e "🔔\n🔔       S O N A R       \n🔔"
-      shell: bash
-
-    # build docker image
-    - name: Build - Docker Image - Steps
-      run: echo -e "🔔\n🔔       D O C K E R      B U I L D       \n🔔"
+    - name: Build - Docker Image - echo
+      run: echo -e "🔔       D O C K E R      B U I L D"
       shell: bash
 
     - name: Build - Docker Image
@@ -197,18 +187,17 @@ runs:
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
       shell: bash
 
-    - name: Release - push Docker image
+    - name: Release - push Docker image [on master]
       if: ${{ inputs.staging == 'true' }} || github.ref == 'refs/heads/master'
       run: docker push ${{ env.DOCKER_IMAGE }}
       shell: bash
 
-    # release STG
-    - name: Release to STG
+    - name: Release - on staging - echo
       if: ${{ inputs.staging == 'true' }}
-      run: echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
+      run: echo -e "🔔       R E L E A S E      S T A G I N G"
       shell: bash
 
-    - name: Release to STG
+    - name: Release - on staging
       if: ${{ inputs.staging == 'true' }}
       uses: silinternational/ecs-deploy@master
       with:
@@ -227,7 +216,7 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: terraform - init, validate and apply STG
+    - name: Release - on staging - terraform validate and apply
       if: ${{ steps.infrastructure-changes.outputs.terraform == 'true' && inputs.staging == 'true' }}
       working-directory: terraform
       run: |
@@ -237,12 +226,11 @@ runs:
       shell: bash
 
 
-    # release PROD
-    - name: Release to PROD
+    - name: Release - on production - echo
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
       shell: bash
 
-    - name: terraform - init, validate and plan PROD
+    - name: Release - on production - terraform validate and plan
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       working-directory: terraform
       run: |
@@ -252,21 +240,21 @@ runs:
         terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
       shell: bash
 
-    - name: terraform - plan output PROD
+    - name: Release - on production - terraform plan
       id: terraform-plan
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       working-directory: terraform
       run: terraform show tfplan -no-color
       shell: bash
 
-    - name: terraform - find PR number
+    - name: Release - on production - terraform - find PR number [on master]
       if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
       uses: jwalton/gh-find-current-pr@v1
       id: find-pr
       with:
         state: open
 
-    - name: terraform - comment plan
+    - name: Release - on production - terraform - add plan to PR [on master]
       if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
       uses: actions/github-script@v6
       env:
@@ -302,7 +290,7 @@ runs:
               body,
           });
 
-    - name: Release to PROD
+    - name: Release - on production [on master]
       if: github.ref == 'refs/heads/master'
       uses: silinternational/ecs-deploy@master
       with:
@@ -321,15 +309,14 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: terraform - apply PROD
+    - name: Release - on production - terraform apply [on master]
       if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref == 'refs/heads/master'
       working-directory: terraform
       run: terraform apply -var 'environment=production' -var 'revision=${{ env.IMAGE_TAG }}' -auto-approve
       shell: bash
 
 
-    # Report to slack
-    - name: Report Steps
+    - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
       shell: bash
