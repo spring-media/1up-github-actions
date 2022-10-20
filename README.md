@@ -1,17 +1,12 @@
-# AWS ECS Gradle Build Steps
-> spring-media/1up-github-actions@build-ecs-gradle
+# Nodejs AWS SAM Build Steps
+> spring-media/1up-github-actions@build-nodejs-lambda
 
 Composite GitHub Action used as a shared build by 1up-team for
-Java/Gradle projects deployed to AWS ECS
+nodejs projects deployed as AWS SAM Lambdas
 
 ### Steps Summary
 - setup
-- Gradle build
-- Docker build and Push
-- Sonar analysis when `sonar-token` is passed
-- STG deploy (if parameter passed)
+- nodejs/sam build
 - on master
-    - deploy Docker image
-    - AWS ECS release
-    - terraform changes are applied (if any)
+    - deploy to AWS Lambda
     - status report
