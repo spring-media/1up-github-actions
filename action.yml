@@ -91,7 +91,7 @@ runs:
       shell: bash
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
