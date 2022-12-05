@@ -115,7 +115,7 @@ runs:
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       run: |
         git config --local --remove-section http."https://github.com/"
-        git config --global url."https://${{ inputs.pkg-user }}:${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
+        git config --global url."https://oauth2:${{ inputs.github-token }}@github.com/spring-media".insteadOf "ssh://git@github.com/spring-media"
       shell: bash
 
     - name: Setup - Report [on master]
