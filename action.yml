@@ -108,11 +108,9 @@ runs:
             - 'terraform/**'
 
     - name: Setup - terraform
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
       uses: hashicorp/setup-terraform@v2
 
     - name: Setup - terraform - git
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
       run: |
         git config --local --remove-section http."https://github.com/"
         git config --global url."https://oauth2:${{ inputs.github-token }}@github.com/spring-media".insteadOf "ssh://git@github.com/spring-media"
