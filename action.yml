@@ -113,7 +113,9 @@ runs:
     - name: Setup - terraform - git
       run: |
         git config --local --remove-section http."https://github.com/"
-        git config --global url."https://oauth2:${{ inputs.github-token }}@github.com/spring-media".insteadOf "ssh://git@github.com/spring-media"
+        git config --local -l
+        git config --global url."https://${{ inputs.pkg-user }}:${{ inputs.pkg-token }}@github.com/spring-media/1up-infrastructure.git".insteadOf "ssh://git@github.com:spring-media/1up-infrastructure.git"
+        git config --global -l
       shell: bash
 
     - name: Setup - Report [on master]
