@@ -222,7 +222,7 @@ runs:
       run: |
         terraform init -backend-config="key=staging/ecs_service_theme/terraform.tfstate"
         terraform validate
-        terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
+        terraform apply -var 'environment=staging' -var 'revision=${{ env.DOCKER_IMAGE }}' -auto-approve
       shell: bash
 
 
@@ -237,7 +237,7 @@ runs:
         rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
         terraform init
         terraform validate
-        terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
+        terraform plan -var 'environment=production' -var 'revision=${{ env.DOCKER_IMAGE }}' -out tfplan
       shell: bash
 
     - name: Release - on production - terraform plan
