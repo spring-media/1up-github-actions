@@ -220,7 +220,7 @@ runs:
       if: ${{ steps.infrastructure-changes.outputs.terraform == 'true' && inputs.staging == 'true' }}
       working-directory: terraform
       run: |
-        terraform init -backend-config="key=staging/ecs_service_theme/terraform.tfstate"
+        terraform init -backend-config="key=staging/ecs_service_${{ env.SERVICE_NAME }}/terraform.tfstate"
         terraform validate
         terraform apply -var 'environment=staging' -var 'revision=${{ env.DOCKER_IMAGE }}' -auto-approve
       shell: bash
