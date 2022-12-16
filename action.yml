@@ -74,7 +74,7 @@ runs:
       shell: bash
 
     - name: ︎Setup - Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: ︎Setup - Java
       uses: actions/setup-java@v3
@@ -132,7 +132,6 @@ runs:
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
       shell: bash
 
-
     - name: Build - echo
       run: echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
       shell: bash
@@ -153,7 +152,6 @@ runs:
       with:
         files: build/test-results/**/*.xml
         comment_mode: off
-
 
     - name: Build - Sonar - echo
       if: inputs.sonar-token
@@ -224,7 +222,6 @@ runs:
         terraform validate
         terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
       shell: bash
-
 
     - name: Release - on production - echo
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
@@ -315,7 +312,6 @@ runs:
       run: terraform apply -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
       shell: bash
 
-
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
@@ -323,13 +319,13 @@ runs:
 
     - name: Report - When Success [on master]
       if: success() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.0.2
+      uses: Ilshidur/action-slack@2.1.0
       env:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
         SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
     - name: Report - When Failure [on master]
       if: failure() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.0.2
+      uses: Ilshidur/action-slack@2.1.0
       env:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
         SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases",  "attachments":[{"color": "#ed2f00", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": ":boom: {{ GIT_ACTIONS_URL }} failed!\n{{ GIT_PR_MSG }}"}}]}]}'
