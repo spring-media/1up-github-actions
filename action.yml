@@ -39,6 +39,8 @@ runs:
       shell: bash
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
+        [[ "${{ inputs.pkg-user }}" ]] || { echo "input 'pkg-user' cannot be blank"; exit 1; }
+        [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
 
     - name: Setup - terraform
       uses: hashicorp/setup-terraform@v2
