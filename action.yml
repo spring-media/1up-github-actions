@@ -193,7 +193,7 @@ runs:
       run: echo -e "🔔       R E L E A S E      S T A G I N G"
 
     - name: Release - on staging
-      if: ${{ inputs.staging == 'true' }}
+      if: ${{ inputs.staging == 'true' }} && steps.infrastructure-changes.outputs.terraform == 'false'
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
@@ -218,7 +218,7 @@ runs:
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
 
     - name: Release - on production [on master]
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
