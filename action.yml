@@ -96,6 +96,8 @@ runs:
     - name: ECR setup
       uses: aws-actions/amazon-ecr-login@v1
 
+
+
     - name: Build - echo
       shell: bash
       run: |
@@ -118,6 +120,8 @@ runs:
         files: build/test-results/**/*.xml
         comment_mode: off
 
+
+
     - name: Build - Sonar - echo
       if: inputs.sonar-token
       shell: bash
@@ -139,6 +143,8 @@ runs:
       shell: bash
       run: ./gradlew sonarqube --info
 
+
+
     - name: Build - Docker Image - echo
       shell: bash
       run: echo -e "🔔       D O C K E R      B U I L D"
@@ -155,6 +161,8 @@ runs:
       shell: bash
       run: docker push ${{ env.DOCKER_IMAGE }}
 
+
+
     - name: Release - Terraform - echo
       shell: bash
       run: echo -e "🔔       T E R R A F O R M"
@@ -170,12 +178,14 @@ runs:
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       uses: spring-media/1up-github-actions@deploy-infrastructure
       with:
-        module-name: ${{ env.SERVICE_NAME }}
+        service-name: ${{ env.SERVICE_NAME }}
         pkg-user: ${{ inputs.pkg-user }}
         pkg-token: ${{ inputs.pkg-token }}
         github-token: ${{ inputs.GITHUB_TOKEN }}
         staging: ${{ inputs.staging }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
+
+
 
     - name: Release - on staging - echo
       if: ${{ inputs.staging == 'true' }}
@@ -201,6 +211,8 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
+
+
     - name: Release - on production - echo
       shell: bash
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
@@ -223,6 +235,8 @@ runs:
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: --timeout
         timeout: 600
+
+
 
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
