@@ -54,10 +54,6 @@ runs:
   steps:
     - name: run terraform changes
       shell: bash
-      run: echo "things are doing"
-
-    - name: run terraform changes
-      shell: bash
       run: echo " ${{ steps.infrastructure-changes.outputs.terraform }}"
 
     - name: Setup - echo
@@ -99,38 +95,6 @@ runs:
 
     - name: ECR setup
       uses: aws-actions/amazon-ecr-login@v1
-
-    - uses: dorny/paths-filter@v2
-      id: infrastructure-changes
-      with:
-        filters: |
-          terraform:
-            - 'terraform/**'
-
-    - name: Setup - terraform
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      uses: hashicorp/setup-terraform@v2
-
-    - name: Setup - terraform - git
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      shell: bash
-      run: |
-        git config --local --remove-section http."https://github.com/"
-        git config --global url."https://${{ inputs.pkg-user }}:${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
-
-    - name: Setup - Report [on master]
-      if: always() && github.ref == 'refs/heads/master'
-      shell: bash
-      run: |
-        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
-        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
-        GIT_REPO_URL="https://github.com/${{ github.repository }}"
-        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
-        GIT_REPO_NAME="${{ github.repository }}"
-        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
-        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
-        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
     - name: Build - echo
       shell: bash
@@ -191,6 +155,28 @@ runs:
       shell: bash
       run: docker push ${{ env.DOCKER_IMAGE }}
 
+    - name: Release - Terraform - echo
+      shell: bash
+      run: echo -e "🔔       T E R R A F O R M"
+
+    - uses: dorny/paths-filter@v2
+      id: infrastructure-changes
+      with:
+        filters: |
+          terraform:
+            - 'terraform/**'
+
+    - name: Release - terraform
+      if: steps.infrastructure-changes.outputs.terraform == 'true'
+      uses: spring-media/1up-github-actions@deploy-infrastructure
+      with:
+        module-name: ${{ env.SERVICE_NAME }}
+        pkg-user: ${{ inputs.pkg-user }}
+        pkg-token: ${{ inputs.pkg-token }}
+        github-token: ${{ inputs.GITHUB_TOKEN }}
+        staging: ${{ inputs.staging }}
+        docker-image-tag: ${{ inputs.docker-image-tag }}
+
     - name: Release - on staging - echo
       if: ${{ inputs.staging == 'true' }}
       shell: bash
@@ -215,78 +201,9 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: Release - on staging - terraform validate and apply
-      if: ${{ steps.infrastructure-changes.outputs.terraform == 'true' && inputs.staging == 'true' }}
-      working-directory: terraform
-      shell: bash
-      run: |
-        terraform init -backend-config="key=staging/ecs_service_${{ env.SERVICE_NAME }}/terraform.tfstate"
-        terraform validate
-        terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
-
     - name: Release - on production - echo
       shell: bash
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
-
-    - name: Release - on production - terraform validate and plan
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      working-directory: terraform
-      shell: bash
-      run: |
-        rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
-        terraform init
-        terraform validate
-        terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
-
-    - name: Release - on production - terraform plan
-      id: terraform-plan
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      working-directory: terraform
-      shell: bash
-      run: terraform show tfplan -no-color
-
-    - name: Release - on production - terraform - find PR number [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
-      uses: jwalton/gh-find-current-pr@v1
-      id: find-pr
-      with:
-        state: open
-
-    - name: Release - on production - terraform - add plan to PR [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
-      uses: actions/github-script@v6
-      env:
-        PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
-        PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const { PULL_REQ_NUMBER } = process.env
-          const prResp = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: PULL_REQ_NUMBER,
-          });
-
-          const prBody = prResp.data.body
-            ? prResp.data.body.substring(0, prResp.data.body.indexOf('#### Terraform Plan'))
-            : '';
-
-          const body = `${prBody}#### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }}\`
-
-          <details><summary>Show Plan</summary>
-
-          \`\`\`hcl\n
-          ${process.env.PLAN}
-          \`\`\`
-
-          </details>`;
-          await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: PULL_REQ_NUMBER,
-              body,
-          });
 
     - name: Release - on production [on master]
       if: github.ref == 'refs/heads/master'
@@ -307,16 +224,24 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: Release - on production - terraform apply [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref == 'refs/heads/master'
-      working-directory: terraform
-      shell: bash
-      run: terraform apply -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
-
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       shell: bash
       run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
+
+    - name: Setup - Report [on master]
+      if: always() && github.ref == 'refs/heads/master'
+      shell: bash
+      run: |
+        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
+        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
+        GIT_REPO_URL="https://github.com/${{ github.repository }}"
+        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
+        GIT_REPO_NAME="${{ github.repository }}"
+        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
+        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
+        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
     - name: Report - When Success [on master]
       if: success() && github.ref == 'refs/heads/master'
