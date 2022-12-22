@@ -3,10 +3,9 @@ author: '1up-team'
 description: 'Action to plan and deploy Terraform modules'
 
 inputs:
-  module-name:
-    description: 'Module name, usually equal to its directory name or service name'
-    required: false
-    default: 'terraform'
+  service-name:
+    description: 'Service name, used to derive Terraform state file on backend'
+    required: true
   module-path:
     description: 'Absolute path to module, e.g. ./terraform, ./terraform/vdfproxy-foobar'
     required: false
@@ -36,6 +35,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Setup - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
+
     - name: Setup - terraform
       uses: hashicorp/setup-terraform@v2
 
@@ -45,14 +49,24 @@ runs:
         git config --local --remove-section http."https://github.com/"
         git config --global url."https://${{ inputs.pkg-user }}:${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
 
+
+
+    - name: Release - on staging - echo
+      if: ${{ inputs.staging == 'true' }}
+      shell: bash
+      run: |
+        echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
+
     - name: Release - on staging - terraform validate and apply
       if: ${{ inputs.staging == 'true' }}
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
-        terraform init -backend-config="key=staging/ecs_service_${{ inputs.module-name }}/terraform.tfstate"
+        terraform init -backend-config="key=staging/ecs_service_${{ inputs.service-name }}/terraform.tfstate"
         terraform validate
         terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
+
+
 
     - name: Release - on production - echo
       shell: bash
@@ -112,25 +126,6 @@ runs:
               pull_number: PULL_REQ_NUMBER,
               body,
           });
-
-    - name: Release - on production [on master]
-      if: github.ref == 'refs/heads/master'
-      uses: silinternational/ecs-deploy@master
-      with:
-        aws_access_key_cmd: --aws-access-key
-        aws_access_key: ${{ inputs.up-aws-access-key-id }}
-        aws_secret_key_cmd: --aws-secret-key
-        aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
-        cluster_cmd: --cluster
-        cluster: up-cluster-production
-        image_cmd: --image
-        image: ${{ env.DOCKER_IMAGE }}
-        region_cmd: --region
-        region: eu-west-1
-        service_name_cmd: --service-name
-        service_name: ${{ env.SERVICE_NAME }}
-        timeout_cmd: --timeout
-        timeout: 600
 
     - name: Release - on production - terraform apply [on master]
       if: github.ref == 'refs/heads/master'
