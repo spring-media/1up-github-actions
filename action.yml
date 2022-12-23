@@ -97,13 +97,13 @@ runs:
         timeout: 600
 
     - name: Release - [on master]
-      uses: silinternational/ecs-deploy@master && steps.infrastructure-changes.outputs.terraform == 'false'
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
+      uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: '--aws-access-key'
-        aws_access_key: ${{ secrets.UP_AWS_ACCESS_KEY_ID }}
+        aws_access_key: ${{ inputs.up-aws-access-key-id }}
         aws_secret_key_cmd: '--aws-secret-key'
-        aws_secret_key: ${{ secrets.UP_AWS_SECRET_ACCESS_KEY }}
+        aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
         cluster_cmd: '--cluster'
         cluster: 'up-cluster-production'
         image_cmd: '--image'
