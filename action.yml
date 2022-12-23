@@ -8,8 +8,8 @@ inputs:
     required: false
     default: '17'
   pkg-user:
-    description: 'User name used to integrate with the spring-media GitHub packages for internal libs'
-    required: true
+    description: 'DEPRECATED: User name used to integrate with the spring-media GitHub packages for internal libs'
+    required: false
   pkg-token:
     description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
     required: true
@@ -63,7 +63,6 @@ runs:
     - name: Setup - Validate Inputs
       shell: bash
       run: |
-        [[ "${{ inputs.pkg-user }}" ]] || { echo "input 'pkg-user' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-access-key-id }}" ]] || { echo "input 'up-aws-access-key-id' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-secret-access-key }}" ]] || { echo "input 'up-aws-secret-access-key' cannot be blank"; exit 1; }
@@ -106,7 +105,6 @@ runs:
     - name: Build - Gradle
       shell: bash
       env:
-        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
         GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
       run: |
         ${{ inputs.gradle-cmd }}
