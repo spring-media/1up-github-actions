@@ -174,7 +174,7 @@ runs:
       with:
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
-        github-token: ${{ inputs.GITHUB_TOKEN }}
+        github-token: ${{ inputs.github-token }}
         staging: ${{ inputs.staging }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
 
