@@ -1,0 +1,154 @@
+name: 'build-ecs-nodejs'
+author: '1up-team'
+description: 'Action to build and release Nodejs & ECS repositories'
+
+inputs:
+  pkg-token:
+    description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
+    required: true
+
+  docker-image-tag:
+    description: 'Docker image build tag used when pushing to the 1up AWS ECR'
+    required: false
+    default: 'b${{ github.run_number }}-${{ github.sha }}'
+  docker-registry:
+    description: 'Docker registry URL used when pushing to the 1up AWS ECR'
+    required: false
+    default: '933782373565.dkr.ecr.eu-west-1.amazonaws.com'
+
+  github-token:
+    description: Github token, current token from secrets
+    required: true
+
+  staging:
+    description: 'Release to staging environment'
+    required: false
+    default: 'false'
+
+  up-slack-webhook-url:
+    description: 'Slack channel webhook URL used when reporting master build status'
+    required: true
+
+  up-aws-access-key-id:
+    description: 'AWS access key id secret used to integrate with aws-cli or docker repository'
+    required: true
+  up-aws-secret-access-key:
+    description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
+
+    - name: Setup service name
+      run: |
+        SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
+        echo "Service name: $SERVICE_NAME"
+        echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+      shell: bash
+
+    - name: ︎Setup - AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
+        aws-region: eu-west-1
+    - name: ECR setup
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build - Docker
+      run: |
+        DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
+        docker build -t $DOCKER_IMAGE .
+        echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
+      shell: bash
+    - name: Release - push Docker image [on master]
+      run: docker push ${{ env.DOCKER_IMAGE }}
+      shell: bash
+
+    - uses: dorny/paths-filter@v2
+      id: infrastructure-changes
+      with:
+        filters: |
+          terraform:
+            - 'terraform/**'
+
+    - name: deploy infrastructure
+      if: steps.infrastructure-changes.outputs.terraform == 'true'
+      uses: spring-media/1up-github-actions@deploy-infrastructure
+      with:
+        service-name: ${{ env.SERVICE_NAME }}
+        pkg-token: ${{ inputs.pkg-token }}
+        docker-image-tag: ${{ inputs.docker-image-tag }}
+        github-token: ${{ inputs.github-token }}
+        staging: ${{ inputs.staging }}
+
+    - name: Release - on staging
+      if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
+      uses: silinternational/ecs-deploy@master
+      with:
+        aws_access_key_cmd: --aws-access-key
+        aws_access_key: ${{ inputs.up-aws-access-key-id }}
+        aws_secret_key_cmd: --aws-secret-key
+        aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
+        cluster_cmd: --cluster
+        cluster: up-cluster-staging
+        image_cmd: --image
+        image: ${{ env.DOCKER_IMAGE }}
+        region_cmd: --region
+        region: eu-west-1
+        service_name_cmd: --service-name
+        service_name: ${{ env.SERVICE_NAME }}
+        timeout_cmd: --timeout
+        timeout: 600
+
+    - name: Release - [on master]
+      if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
+      uses: silinternational/ecs-deploy@master
+      with:
+        aws_access_key_cmd: '--aws-access-key'
+        aws_access_key: ${{ inputs.up-aws-access-key-id }}
+        aws_secret_key_cmd: '--aws-secret-key'
+        aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
+        cluster_cmd: '--cluster'
+        cluster: 'up-cluster-production'
+        image_cmd: '--image'
+        image: ${{ env.DOCKER_IMAGE }}
+        region_cmd: '--region'
+        region: 'eu-west-1'
+        service_name_cmd: '--service-name'
+        service_name: ${{ env.SERVICE_NAME }}
+        timeout_cmd: '--timeout'
+        timeout: '600'
+
+    - name: Report - setup [on master]
+      if: always() && github.ref == 'refs/heads/master'
+      run: |
+        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
+        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
+        GIT_REPO_URL="https://github.com/${{ github.repository }}"
+        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
+        GIT_REPO_NAME="${{ github.repository }}"
+        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
+        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
+        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
+      shell: bash
+    - name: Report - success [on master]
+      uses: Ilshidur/action-slack@2.1.0
+      if: success() && github.ref == 'refs/heads/master'
+      env:
+        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
+        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
+    - name: Report - failure [on master]
+      uses: Ilshidur/action-slack@2.1.0
+      if: failure() && github.ref == 'refs/heads/master'
+      env:
+        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
+        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases",  "attachments":[{"color": "#ed2f00", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": ":boom: {{ GIT_ACTIONS_URL }} failed!\n{{ GIT_PR_MSG }}"}}]}]}'
