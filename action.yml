@@ -53,18 +53,20 @@ runs:
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
       shell: bash
 
-    - name: Build - Docker
-      run: |
-        DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
-        docker build -t $DOCKER_IMAGE .
-        echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
-      shell: bash
     - name: ︎Setup - AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
         aws-region: eu-west-1
+    - name: ECR setup
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build - Docker
+      run: |
+        DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
+        docker build -t $DOCKER_IMAGE .
+        echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
+      shell: bash
     - name: Release - push Docker image [on master]
       run: docker push ${{ env.DOCKER_IMAGE }}
       shell: bash
