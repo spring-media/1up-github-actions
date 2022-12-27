@@ -136,7 +136,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
         SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
-      run: ./gradlew sonarqube --info
+      run: ./gradlew sonar --info
 
 
 
