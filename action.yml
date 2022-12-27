@@ -1,0 +1,139 @@
+name: 'deploy-infrastructure'
+author: '1up-team'
+description: 'Action to plan and deploy Terraform modules'
+
+inputs:
+  service-name:
+    description: 'Service name, used to derive Terraform state file on backend'
+    required: true
+  module-path:
+    description: 'Absolute path to module, e.g. ./terraform, ./terraform/vdfproxy-foobar'
+    required: false
+    default: './terraform'
+
+  pkg-token:
+    description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
+    required: true
+
+  docker-image-tag:
+    description: 'Docker image build tag used when pushing to the 1up AWS ECR'
+    required: false
+    default: 'b${{ github.run_number }}-${{ github.sha }}'
+
+  github-token:
+    description: Github token, current token from secrets
+    required: true
+
+  staging:
+    description: 'Release to staging environment'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
+        [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
+
+    - name: Setup - terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Setup - terraform - git
+      shell: bash
+      run: |
+        git config --local --remove-section http."https://github.com/"
+        git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
+
+
+
+    - name: Release - on staging - echo
+      if: ${{ inputs.staging == 'true' }}
+      shell: bash
+      run: |
+        echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
+
+    - name: Release - on staging - terraform validate and apply
+      if: ${{ inputs.staging == 'true' }}
+      working-directory: ${{ inputs.module-path }}
+      shell: bash
+      run: |
+        terraform init -backend-config="key=staging/ecs_service_${{ inputs.service-name }}/terraform.tfstate"
+        terraform validate
+        terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
+
+
+
+    - name: Release - on production - echo
+      shell: bash
+      run: |
+        echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
+
+    - name: Release - on production - terraform validate and plan
+      working-directory: ${{ inputs.module-path }}
+      run: |
+        rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
+        terraform init
+        terraform validate
+        terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
+      shell: bash
+
+    - name: Release - on production - terraform plan
+      id: terraform-plan
+      working-directory: ${{ inputs.module-path }}
+      shell: bash
+      run: |
+        terraform show tfplan -no-color
+
+    - name: Release - on production - terraform - find PR number [on master]
+      if: github.ref != 'refs/heads/master'
+      uses: jwalton/gh-find-current-pr@v1
+      id: find-pr
+      with:
+        state: open
+
+    - name: Release - on production - terraform - add plan to PR [on master]
+      if: github.ref != 'refs/heads/master'
+      uses: actions/github-script@v6
+      env:
+        PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
+        PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { PULL_REQ_NUMBER } = process.env
+          const prResp = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: PULL_REQ_NUMBER,
+          });
+
+          const prBody = prResp.data.body
+            ? prResp.data.body.substring(0, prResp.data.body.indexOf('#### Terraform Plan'))
+            : '';
+
+          const body = `${prBody}#### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }}\`
+
+          <details><summary>Show Plan</summary>
+
+          \`\`\`hcl\n
+          ${process.env.PLAN}
+          \`\`\`
+
+          </details>`;
+          await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: PULL_REQ_NUMBER,
+              body,
+          });
+
+    - name: Release - on production - terraform apply [on master]
+      if: github.ref == 'refs/heads/master'
+      working-directory: ${{ inputs.module-path }}
+      shell: bash
+      run: |
+        terraform apply -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
