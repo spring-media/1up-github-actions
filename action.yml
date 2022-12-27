@@ -11,6 +11,10 @@ inputs:
     description: 'Docker image build tag used when pushing to the 1up AWS ECR'
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
+  docker-registry:
+    description: 'Docker registry URL used when pushing to the 1up AWS ECR'
+    required: false
+    default: '933782373565.dkr.ecr.eu-west-1.amazonaws.com'
 
   github-token:
     description: Github token, current token from secrets
@@ -51,7 +55,7 @@ runs:
 
     - name: Build - Docker
       run: |
-        DOCKER_IMAGE="${{ env.ECR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ env.IMAGE_TAG }}"
+        DOCKER_IMAGE="${{ inputs.ECR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
         docker build -t $DOCKER_IMAGE .
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
       shell: bash
