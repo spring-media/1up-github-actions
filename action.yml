@@ -45,6 +45,7 @@ runs:
       shell: bash
       run: |
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
 
     - name: Setup service name
       run: |
