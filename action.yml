@@ -186,7 +186,7 @@ runs:
       run: echo -e "🔔       R E L E A S E      S T A G I N G"
 
     - name: Release - on staging
-      if: ${{ inputs.staging == 'true' }} && steps.infrastructure-changes.outputs.terraform == 'false'
+      if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
