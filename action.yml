@@ -18,7 +18,7 @@ inputs:
 
   github-token:
     description: Github token, current token from secrets
-    required: false
+    required: true
 
   staging:
     description: 'Release to staging environment'
@@ -139,7 +139,7 @@ runs:
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
       shell: bash
     - name: Report - success [on master]
-      uses: Ilshidur/action-slack@2.0.2
+      uses: Ilshidur/action-slack@2.1.0
       if: success() && github.ref == 'refs/heads/master'
       env:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
