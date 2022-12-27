@@ -3,9 +3,6 @@ author: '1up-team'
 description: 'Action to build and release Nodejs & ECS repositories'
 
 inputs:
-  pkg-user:
-    description: 'User name used to integrate with the spring-media GitHub packages for internal libs'
-    required: true
   pkg-token:
     description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
     required: true
@@ -31,12 +28,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup - Validate Inputs
       shell: bash
       run: |
-        [[ "${{ inputs.pkg-user }}" ]] || { echo "input 'pkg-user' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
 
     - name: Setup service name
@@ -78,7 +74,7 @@ runs:
         staging: ${{ inputs.staging }}
 
     - name: Release - on staging
-      if: ${{ inputs.staging == 'true' }} && steps.infrastructure-changes.outputs.terraform == 'false'
+      if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
@@ -134,7 +130,7 @@ runs:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
         SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
     - name: Report - failure [on master]
-      uses: Ilshidur/action-slack@2.0.2
+      uses: Ilshidur/action-slack@2.1.0
       if: failure() && github.ref == 'refs/heads/master'
       env:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
