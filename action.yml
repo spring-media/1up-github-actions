@@ -25,6 +25,13 @@ inputs:
     description: 'Slack channel webhook URL used when reporting master build status'
     required: true
 
+  up-aws-access-key-id:
+    description: 'AWS access key id secret used to integrate with aws-cli or docker repository'
+    required: true
+  up-aws-secret-access-key:
+    description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
+    required: true
+
 runs:
   using: composite
   steps:
