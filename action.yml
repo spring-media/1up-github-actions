@@ -8,6 +8,7 @@ inputs:
     required: false
     default: '17'
   pkg-user:
+    deprecationMessage: 'pkg-token requires no user name'
     description: 'DEPRECATED: User name used to integrate with the spring-media GitHub packages for internal libs'
     required: false
   pkg-token:
