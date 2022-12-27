@@ -109,10 +109,10 @@ runs:
         rm -f ~/.gradle/caches/modules-2/gc.properties
 
     - name: Build - Gradle - Annotate Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1
+      uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        files: build/test-results/**/*.xml
+        junit_files: build/test-results/**/*.xml
         comment_mode: off
 
 
