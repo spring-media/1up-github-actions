@@ -8,8 +8,9 @@ inputs:
     required: false
     default: '17'
   pkg-user:
-    description: 'User name used to integrate with the spring-media GitHub packages for internal libs'
-    required: true
+    deprecationMessage: 'pkg-token requires no user name'
+    description: 'DEPRECATED: User name used to integrate with the spring-media GitHub packages for internal libs'
+    required: false
   pkg-token:
     description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
     required: true
@@ -52,26 +53,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: run terraform changes
-      run: echo "things are doing"
-      shell: bash
-
-    - name: run terraform changes
-      run: echo " ${{ steps.infrastructure-changes.outputs.terraform }}"
-      shell: bash
-
     - name: Setup - echo
-      run: echo -e "🔔\n🔔\n🔔       S E T U P       \n🔔\n🔔"
       shell: bash
+      run: echo -e "🔔\n🔔\n🔔       S E T U P       \n🔔\n🔔"
 
     - name: Setup - Validate Inputs
+      shell: bash
       run: |
-        [[ "${{ inputs.pkg-user }}" ]] || { echo "input 'pkg-user' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-access-key-id }}" ]] || { echo "input 'up-aws-access-key-id' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-secret-access-key }}" ]] || { echo "input 'up-aws-secret-access-key' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-slack-webhook-url }}" ]] || { echo "input 'up-slack-webhook-url' cannot be blank"; exit 1; }
-      shell: bash
 
     - name: ︎Setup - Checkout
       uses: actions/checkout@v3
@@ -84,11 +76,11 @@ runs:
         cache: gradle
 
     - name: ︎Setup - Service Name
+      shell: bash
       run: |
         SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
         echo "Setup Service name: $SERVICE_NAME"
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
-      shell: bash
 
     - name: ︎Setup - AWS Credentials [on master]
       uses: aws-actions/configure-aws-credentials@v1-node16
@@ -100,51 +92,21 @@ runs:
     - name: ECR setup
       uses: aws-actions/amazon-ecr-login@v1
 
-    - uses: dorny/paths-filter@v2
-      id: infrastructure-changes
-      with:
-        filters: |
-          terraform:
-            - 'terraform/**'
 
-    - name: Setup - terraform
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      uses: hashicorp/setup-terraform@v2
-
-    - name: Setup - terraform - git
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      run: |
-        git config --local --remove-section http."https://github.com/"
-        git config --global url."https://${{ inputs.pkg-user }}:${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
-      shell: bash
-
-    - name: Setup - Report [on master]
-      if: always() && github.ref == 'refs/heads/master'
-      run: |
-        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
-        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
-        GIT_REPO_URL="https://github.com/${{ github.repository }}"
-        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
-        GIT_REPO_NAME="${{ github.repository }}"
-        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
-        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
-        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
-      shell: bash
 
     - name: Build - echo
-      run: echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
       shell: bash
+      run: |
+        echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
 
     - name: Build - Gradle
+      shell: bash
       env:
-        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
         GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
       run: |
         ${{ inputs.gradle-cmd }}
         rm -f ~/.gradle/caches/modules-2/modules-2.lock
         rm -f ~/.gradle/caches/modules-2/gc.properties
-      shell: bash
 
     - name: Build - Gradle - Annotate Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
@@ -153,10 +115,12 @@ runs:
         files: build/test-results/**/*.xml
         comment_mode: off
 
+
+
     - name: Build - Sonar - echo
       if: inputs.sonar-token
-      run: echo -e "🔔\n🔔       S O N A R       \n🔔"
       shell: bash
+      run: echo -e "🔔\n🔔       S O N A R       \n🔔"
 
     - name: Build - Sonar - Cache
       if: inputs.sonar-token
@@ -171,32 +135,59 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
         SONAR_TOKEN: ${{ inputs.sonar-token }}
-      run: ./gradlew sonarqube --info
       shell: bash
+      run: ./gradlew sonarqube --info
+
+
 
     - name: Build - Docker Image - echo
-      run: echo -e "🔔       D O C K E R      B U I L D"
       shell: bash
+      run: echo -e "🔔       D O C K E R      B U I L D"
 
     - name: Build - Docker Image
+      shell: bash
       run: |
         DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
         docker build -t $DOCKER_IMAGE .
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
-      shell: bash
 
     - name: Release - push Docker image [on master]
       if: ${{ inputs.staging == 'true' }} || github.ref == 'refs/heads/master'
-      run: docker push ${{ env.DOCKER_IMAGE }}
       shell: bash
+      run: docker push ${{ env.DOCKER_IMAGE }}
+
+
+
+    - name: Release - Terraform - echo
+      shell: bash
+      run: echo -e "🔔       T E R R A F O R M"
+
+    - uses: dorny/paths-filter@v2
+      id: infrastructure-changes
+      with:
+        filters: |
+          terraform:
+            - 'terraform/**'
+
+    - name: Release - terraform
+      if: steps.infrastructure-changes.outputs.terraform == 'true'
+      uses: spring-media/1up-github-actions@deploy-infrastructure
+      with:
+        service-name: ${{ env.SERVICE_NAME }}
+        pkg-token: ${{ inputs.pkg-token }}
+        github-token: ${{ inputs.github-token }}
+        staging: ${{ inputs.staging }}
+        docker-image-tag: ${{ inputs.docker-image-tag }}
+
+
 
     - name: Release - on staging - echo
       if: ${{ inputs.staging == 'true' }}
-      run: echo -e "🔔       R E L E A S E      S T A G I N G"
       shell: bash
+      run: echo -e "🔔       R E L E A S E      S T A G I N G"
 
     - name: Release - on staging
-      if: ${{ inputs.staging == 'true' }}
+      if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
@@ -214,81 +205,14 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: Release - on staging - terraform validate and apply
-      if: ${{ steps.infrastructure-changes.outputs.terraform == 'true' && inputs.staging == 'true' }}
-      working-directory: terraform
-      run: |
-        terraform init -backend-config="key=staging/ecs_service_${{ env.SERVICE_NAME }}/terraform.tfstate"
-        terraform validate
-        terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
-      shell: bash
+
 
     - name: Release - on production - echo
+      shell: bash
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
-      shell: bash
-
-    - name: Release - on production - terraform validate and plan
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      working-directory: terraform
-      run: |
-        rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
-        terraform init
-        terraform validate
-        terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
-      shell: bash
-
-    - name: Release - on production - terraform plan
-      id: terraform-plan
-      if: steps.infrastructure-changes.outputs.terraform == 'true'
-      working-directory: terraform
-      run: terraform show tfplan -no-color
-      shell: bash
-
-    - name: Release - on production - terraform - find PR number [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
-      uses: jwalton/gh-find-current-pr@v1
-      id: find-pr
-      with:
-        state: open
-
-    - name: Release - on production - terraform - add plan to PR [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref != 'refs/heads/master'
-      uses: actions/github-script@v6
-      env:
-        PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
-        PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const { PULL_REQ_NUMBER } = process.env
-          const prResp = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: PULL_REQ_NUMBER,
-          });
-
-          const prBody = prResp.data.body
-            ? prResp.data.body.substring(0, prResp.data.body.indexOf('#### Terraform Plan'))
-            : '';
-
-          const body = `${prBody}#### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }}\`
-
-          <details><summary>Show Plan</summary>
-
-          \`\`\`hcl\n
-          ${process.env.PLAN}
-          \`\`\`
-
-          </details>`;
-          await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: PULL_REQ_NUMBER,
-              body,
-          });
 
     - name: Release - on production [on master]
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
@@ -306,16 +230,26 @@ runs:
         timeout_cmd: --timeout
         timeout: 600
 
-    - name: Release - on production - terraform apply [on master]
-      if: steps.infrastructure-changes.outputs.terraform == 'true' && github.ref == 'refs/heads/master'
-      working-directory: terraform
-      run: terraform apply -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
-      shell: bash
+
 
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
-      run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
       shell: bash
+      run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
+
+    - name: Setup - Report [on master]
+      if: always() && github.ref == 'refs/heads/master'
+      shell: bash
+      run: |
+        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
+        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
+        GIT_REPO_URL="https://github.com/${{ github.repository }}"
+        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
+        GIT_REPO_NAME="${{ github.repository }}"
+        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
+        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
+        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
     - name: Report - When Success [on master]
       if: success() && github.ref == 'refs/heads/master'
@@ -323,6 +257,7 @@ runs:
       env:
         SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
         SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
+
     - name: Report - When Failure [on master]
       if: failure() && github.ref == 'refs/heads/master'
       uses: Ilshidur/action-slack@2.1.0
