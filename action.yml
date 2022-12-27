@@ -63,6 +63,7 @@ runs:
         aws-region: eu-west-1
     - name: Release - push Docker image [on master]
       run: docker push ${{ env.DOCKER_IMAGE }}
+      shell: bash
 
     - uses: dorny/paths-filter@v2
       id: infrastructure-changes
@@ -132,6 +133,7 @@ runs:
         echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
         [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
+      shell: bash
     - name: Report - success [on master]
       uses: Ilshidur/action-slack@2.0.2
       if: success() && github.ref == 'refs/heads/master'
