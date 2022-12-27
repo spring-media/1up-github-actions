@@ -84,7 +84,6 @@ runs:
       uses: spring-media/1up-github-actions@deploy-infrastructure
       with:
         service-name: ${{ env.SERVICE_NAME }}
-        pkg-user: ${{ inputs.pkg-user }}
         pkg-token: ${{ inputs.pkg-token }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
         github-token: ${{ inputs.github-token }}
