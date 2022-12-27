@@ -101,6 +101,7 @@ runs:
     - name: Build - Gradle
       shell: bash
       env:
+        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
         GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
       run: |
         ${{ inputs.gradle-cmd }}
