@@ -15,4 +15,4 @@ Composite GitHub Actions used as shared builds by 1up-team
 [spring-media/1up-github-actions@build-nodejs-lambda](https://github.com/spring-media/1up-github-actions/tree/build-nodejs-lambda)
 
 ### AWS Terraform Deploy Steps
-[spring-media/1up-github-actions@build-ecs-gradle](https://github.com/spring-media/1up-github-actions/tree/deploy-infrastructure)
+[spring-media/1up-github-actions@deploy-infrastructure](https://github.com/spring-media/1up-github-actions/tree/deploy-infrastructure)
