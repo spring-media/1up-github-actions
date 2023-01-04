@@ -9,7 +9,7 @@ inputs:
   module-path:
     description: 'Absolute path to module, e.g. ./terraform, ./terraform/vdfproxy-foobar'
     required: false
-    default: './terraform'
+    default: 'terraform'
 
   pkg-token:
     description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
