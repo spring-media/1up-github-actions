@@ -7,7 +7,7 @@ inputs:
     description: 'Service name, used to derive Terraform state file on backend'
     required: true
   module-path:
-    description: 'Absolute path to module, e.g. ./terraform, ./terraform/vdfproxy-foobar'
+    description: 'Path to the Terraform stack dir'
     required: false
     default: 'terraform'
 
@@ -29,6 +29,11 @@ inputs:
     required: false
     default: 'false'
 
+outputs:
+  infrastructure-changes:
+    description: "Flag indicating found changes in the terraform module"
+    value: ${{ steps.infrastructure-changes.outputs.found }}
+
 runs:
   using: composite
   steps:
@@ -39,10 +44,19 @@ runs:
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
 
+    - uses: dorny/paths-filter@v2
+      id: infrastructure-changes
+      with:
+        filters: |
+          found:
+            - '${{ inputs.module-path }}/**'
+
     - name: Setup - terraform
+      if: steps.infrastructure-changes.outputs.found
       uses: hashicorp/setup-terraform@v2
 
     - name: Setup - terraform - git
+      if: steps.infrastructure-changes.outputs.found
       shell: bash
       run: |
         git config --local --remove-section http."https://github.com/"
@@ -51,13 +65,13 @@ runs:
 
 
     - name: Release - on staging - echo
-      if: ${{ inputs.staging == 'true' }}
+      if: steps.infrastructure-changes.outputs.found && inputs.staging
       shell: bash
       run: |
         echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
 
     - name: Release - on staging - terraform validate and apply
-      if: ${{ inputs.staging == 'true' }}
+      if: steps.infrastructure-changes.outputs.found && inputs.staging
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
@@ -68,11 +82,13 @@ runs:
 
 
     - name: Release - on production - echo
+      if: steps.infrastructure-changes.outputs.found
       shell: bash
       run: |
         echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
 
     - name: Release - on production - terraform validate and plan
+      if: steps.infrastructure-changes.outputs.found
       working-directory: ${{ inputs.module-path }}
       run: |
         rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
@@ -82,6 +98,7 @@ runs:
       shell: bash
 
     - name: Release - on production - terraform plan
+      if: steps.infrastructure-changes.outputs.found
       id: terraform-plan
       working-directory: ${{ inputs.module-path }}
       shell: bash
@@ -89,14 +106,14 @@ runs:
         terraform show tfplan -no-color
 
     - name: Release - on production - terraform - find PR number [on master]
-      if: github.ref != 'refs/heads/master'
+      if: steps.infrastructure-changes.outputs.found && github.ref != 'refs/heads/master'
       uses: jwalton/gh-find-current-pr@v1
       id: find-pr
       with:
         state: open
 
     - name: Release - on production - terraform - add plan to PR [on master]
-      if: github.ref != 'refs/heads/master'
+      if: steps.infrastructure-changes.outputs.found && github.ref != 'refs/heads/master'
       uses: actions/github-script@v6
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
@@ -110,20 +127,27 @@ runs:
               repo: context.repo.repo,
               pull_number: PULL_REQ_NUMBER,
           });
+          let prBody = '';
+          
+          if (prResp.data.body) {
+            const planHeaderIndex = prResp.data.body.indexOf('#### Terraform Plan')
+            
+            if (planHeaderIndex > 0) {
+              prBody = prResp.data.body.substring(0, prBodyPlanIndex);
+            }
+          }
+          const body = 
+            `${prBody}
+            #### 📖 Terraform Plan: **${{ steps.terraform-plan.outcome }}**
 
-          const prBody = prResp.data.body
-            ? prResp.data.body.substring(0, prResp.data.body.indexOf('#### Terraform Plan'))
-            : '';
+            <details>
+              <summary>Show Plan</summary>
 
-          const body = `${prBody}#### Terraform Plan 📖\`${{ steps.terraform-plan.outcome }}\`
+              \`\`\`hcl\n
+              ${process.env.PLAN}
+              \`\`\`
+            </details>`;
 
-          <details><summary>Show Plan</summary>
-
-          \`\`\`hcl\n
-          ${process.env.PLAN}
-          \`\`\`
-
-          </details>`;
           await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -132,7 +156,7 @@ runs:
           });
 
     - name: Release - on production - terraform apply [on master]
-      if: github.ref == 'refs/heads/master'
+      if: steps.infrastructure-changes.outputs.found && github.ref == 'refs/heads/master'
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
