@@ -256,7 +256,7 @@ runs:
       uses: slackapi/slack-github-action@v1.23.0
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
       with:
         channel-id: "1up-releases"
         payload: |
@@ -282,7 +282,7 @@ runs:
       uses: slackapi/slack-github-action@v1.23.0
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
       with:
         channel-id: "1up-releases"
         payload: |
