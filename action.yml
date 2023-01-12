@@ -251,16 +251,54 @@ runs:
         [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
-    - name: Report - When Success [on master]
+    - name: Report - success [on master]
       if: success() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.1.0
+      uses: slackapi/slack-github-action@v1.23.0
       env:
-        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
-        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        SLACK_WEBHOOK_URL: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
+      with:
+        channel-id: "1up-releases"
+        payload: |
+          {
+            "attachments": [
+              {
+                "color": "#2eb886",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "${{ env.EMOJI_ID }} ${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
 
-    - name: Report - When Failure [on master]
+    - name: Report - failure [on master]
       if: failure() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.1.0
+      uses: slackapi/slack-github-action@v1.23.0
       env:
-        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
-        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases",  "attachments":[{"color": "#ed2f00", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": ":boom: {{ GIT_ACTIONS_URL }} failed!\n{{ GIT_PR_MSG }}"}}]}]}'
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        SLACK_WEBHOOK_URL: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
+      with:
+        channel-id: "1up-releases"
+        payload: |
+          {
+            "attachments": [
+              {
+                "color": "#ed2f00",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": ":boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
