@@ -253,7 +253,7 @@ runs:
 
     - name: Report - success [on master]
       if: success() && github.ref == 'refs/heads/master'
-      uses: slackapi/slack-github-action@v1.23.0
+      uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
@@ -279,7 +279,7 @@ runs:
 
     - name: Report - failure [on master]
       if: failure() && github.ref == 'refs/heads/master'
-      uses: slackapi/slack-github-action@v1.23.0
+      uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
