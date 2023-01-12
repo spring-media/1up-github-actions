@@ -269,7 +269,7 @@ runs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "${{ env.EMOJI_ID }} ${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
+                      "text": ":this-is-fine-fire: ${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
                     }
                   }
                 ]
