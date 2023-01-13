@@ -153,11 +153,10 @@ runs:
 
           if (prResp.data?.body) {
             if (prResp.data.body.includes(planStartMarker)) {
-              planBody = prResp.data.body
-                .replace(
-                  new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
-                  planBody
-                );
+              planBody = prResp.data.body.replace(
+                new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
+                planBody
+              );
             } else {
               planBody = prResp.data.body + '\n' + planBody;
             }
