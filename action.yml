@@ -1,6 +1,6 @@
 name: 'deploy-infrastructure'
 author: '1up-team'
-description: 'Action to plan and deploy Terraform modules'
+description: 'Plan/deploy Terraform stacks'
 
 inputs:
   service-name:
@@ -131,29 +131,33 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const { PULL_REQ_NUMBER } = process.env
+          const { PULL_REQ_NUMBER, PLAN } = process.env;
           const prResp = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: PULL_REQ_NUMBER,
           });
-          let prBody = '';
           
-          if (prResp.data.body) {
-            const planHeaderIndex = prResp.data.body.indexOf('#### Terraform Plan')
-            
-            if (planHeaderIndex > 0) {
-              prBody = prResp.data.body.substring(0, prBodyPlanIndex);
-            }
-          }
-          const body = prBody
-            + '\n<details>\n'
-            + '<summary>📖 Terraform Plan: <strong>${{ steps.terraform-plan.outcome }}</strong></summary>\n'
-            + '```hcl\n'
-            + process.env.PLAN
-            + '```\n'
-            + '</details>';
+          const planStartMarker = '<!--start-${{ inputs.module-path }}-->';
+          const planEndMarker = '<!--end-${{ inputs.module-path }}-->';
+          
+          let body =
+            planStartMarker + '\n'
+            + '<details>'
+            + '<summary>📖 ${{ inputs.module-path }} plan: <code>${{ steps.terraform-plan.outcome }}</code></summary>\n'
+            + '\n```hcl\n'
+            + PLAN
+            + '\n```\n'
+            + '</details>\n'
+            + planEndMarker + '\n';
 
+          if (prResp.data?.body?.includes(planStartMarker)) {
+            body = prResp.data.body
+              .replace(
+                new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
+                body
+              );
+          }
           await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
