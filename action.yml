@@ -141,7 +141,7 @@ runs:
           const planStartMarker = '<!--start-${{ inputs.module-path }}-->';
           const planEndMarker = '<!--end-${{ inputs.module-path }}-->';
           
-          let body =
+          let planBody =
             planStartMarker + '\n'
             + '<details>'
             + '<summary>📖 ${{ inputs.module-path }} plan: <code>${{ steps.terraform-plan.outcome }}</code></summary>\n'
@@ -151,18 +151,22 @@ runs:
             + '</details>\n'
             + planEndMarker + '\n';
 
-          if (prResp.data?.body?.includes(planStartMarker)) {
-            body = prResp.data.body
-              .replace(
-                new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
-                body
-              );
+          if (prResp.data?.body) {
+            if (prResp.data.body.includes(planStartMarker)) {
+              planBody = prResp.data.body
+                .replace(
+                  new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
+                  planBody
+                );
+            } else {
+              planBody = prResp.data.body + '\n' + planBody;
+            }
           }
           await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: PULL_REQ_NUMBER,
-              body,
+              planBody,
           });
 
     - name: Release - on production - terraform apply [on master]
