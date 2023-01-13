@@ -159,7 +159,7 @@ runs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": ":this-is-fine-fire: ${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
+                      "text": "${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
                     }
                   }
                 ]
