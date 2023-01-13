@@ -52,11 +52,11 @@ runs:
             - '${{ inputs.module-path }}/**'
 
     - name: Setup - terraform
-      if: steps.infrastructure-changes.outputs.found
+      if: steps.infrastructure-changes.outputs.found == 'true'
       uses: hashicorp/setup-terraform@v2
 
     - name: Setup - terraform - git
-      if: steps.infrastructure-changes.outputs.found
+      if: steps.infrastructure-changes.outputs.found == 'true'
       shell: bash
       run: |
         git config --local --remove-section http."https://github.com/"
@@ -65,13 +65,17 @@ runs:
 
 
     - name: Release - on staging - echo
-      if: steps.infrastructure-changes.outputs.found && inputs.staging
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true' 
+        && inputs.staging == 'true'
       shell: bash
       run: |
         echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
 
     - name: Release - on staging - terraform validate and apply
-      if: steps.infrastructure-changes.outputs.found && inputs.staging
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true' 
+        && inputs.staging == 'true'
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
@@ -81,14 +85,16 @@ runs:
 
 
 
-    - name: Release - on production - echo
-      if: steps.infrastructure-changes.outputs.found
+    - name: Release - on production - echo [on master]
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true'
+        && github.ref == 'refs/heads/master'
       shell: bash
       run: |
         echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
 
     - name: Release - on production - terraform validate and plan
-      if: steps.infrastructure-changes.outputs.found
+      if: steps.infrastructure-changes.outputs.found == 'true'
       working-directory: ${{ inputs.module-path }}
       run: |
         rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
@@ -98,7 +104,7 @@ runs:
       shell: bash
 
     - name: Release - on production - terraform plan
-      if: steps.infrastructure-changes.outputs.found
+      if: steps.infrastructure-changes.outputs.found == 'true'
       id: terraform-plan
       working-directory: ${{ inputs.module-path }}
       shell: bash
@@ -106,14 +112,18 @@ runs:
         terraform show tfplan -no-color
 
     - name: Release - on production - terraform - find PR number [on master]
-      if: steps.infrastructure-changes.outputs.found && github.ref != 'refs/heads/master'
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true' 
+        && github.ref != 'refs/heads/master'
       uses: jwalton/gh-find-current-pr@v1
       id: find-pr
       with:
         state: open
 
     - name: Release - on production - terraform - add plan to PR [on master]
-      if: steps.infrastructure-changes.outputs.found && github.ref != 'refs/heads/master'
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true' 
+        && github.ref != 'refs/heads/master'
       uses: actions/github-script@v6
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
@@ -136,17 +146,13 @@ runs:
               prBody = prResp.data.body.substring(0, prBodyPlanIndex);
             }
           }
-          const body = 
-            `${prBody}
-            #### 📖 Terraform Plan: **${{ steps.terraform-plan.outcome }}**
-
-            <details>
-              <summary>Show Plan</summary>
-
-              \`\`\`hcl\n
-              ${process.env.PLAN}
-              \`\`\`
-            </details>`;
+          const body = prBody
+            + '\n<details>\n'
+            + '<summary>📖 Terraform Plan: <strong>${{ steps.terraform-plan.outcome }}</strong></summary>\n'
+            + '```hcl\n'
+            + process.env.PLAN
+            + '```\n'
+            + '</details>';
 
           await github.rest.pulls.update({
               owner: context.repo.owner,
@@ -156,7 +162,9 @@ runs:
           });
 
     - name: Release - on production - terraform apply [on master]
-      if: steps.infrastructure-changes.outputs.found && github.ref == 'refs/heads/master'
+      if: |
+        steps.infrastructure-changes.outputs.found == 'true' 
+        && github.ref == 'refs/heads/master'
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
