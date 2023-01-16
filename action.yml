@@ -166,7 +166,7 @@ runs:
               updatedPrBody = currentPrBody + '\n' + updatedPrBody;
             }
           }
-          console.log(`[add plan to PR] Update PR description to:\n${updatedPrBody.substring(0, 200)}[...]`);
+          console.debug(`[add plan to PR] Update PR description to:\n${updatedPrBody.substring(0, 200)}[...]`);
           
           await github.rest.pulls.update({
               owner: context.repo.owner,
