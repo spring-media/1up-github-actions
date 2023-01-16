@@ -172,7 +172,7 @@ runs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: PULL_REQ_NUMBER,
-              'updatedPrBody',
+              body: updatedPrBody,
           });
 
     - name: Release - on production - terraform apply [on master]
