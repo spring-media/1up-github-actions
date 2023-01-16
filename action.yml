@@ -150,21 +150,24 @@ runs:
             + '\n```\n'
             + '</details>\n'
             + planEndMarker + '\n';
-
-          if (prResp.data?.body) {
-            if (prResp.data.body.includes(planStartMarker)) {
-              console.log(`Found '${planStartMarker}'`);
+          const prBody = prResp.data?.body;
           
-              planBody = prResp.data.body.replace(
+          if (prBody) {
+            if (prBody.includes(planStartMarker)) {
+              console.log(`[add plan to PR] Found '${planStartMarker}'`);
+          
+              planBody = prBody.replace(
                 new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
                 planBody
               );
             } else {
-              console.log(`'${planStartMarker}' was not found`);
+              console.log(`[add plan to PR] '${planStartMarker}' was not found`);
           
-              planBody = prResp.data.body + '\n' + planBody;
+              planBody = prBody + '\n' + planBody;
             }
           }
+          console.log(`[add plan to PR] Update PR description to:\n${planBody.substring(0, 200)}[...]`);
+          
           await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
