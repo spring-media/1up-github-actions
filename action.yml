@@ -142,14 +142,14 @@ runs:
           const planEndMarker = '<!--end-${{ inputs.module-path }}-->';
           
           let updatedPrBody =
-            '\n'
+            planStartMarker + '\n'
             + '<details>'
             + '<summary>📖 ${{ inputs.module-path }} plan: <code>${{ steps.terraform-plan.outcome }}</code></summary>\n'
             + '\n```hcl\n'
             + PLAN
             + '\n```\n'
             + '</details>\n'
-            + '\n';
+            + planEndMarker + '\n';
           const currentPrBody = prResp.data?.body;
           
           if (currentPrBody) {
