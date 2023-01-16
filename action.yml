@@ -141,38 +141,38 @@ runs:
           const planStartMarker = '<!--start-${{ inputs.module-path }}-->';
           const planEndMarker = '<!--end-${{ inputs.module-path }}-->';
           
-          let planBody =
-            planStartMarker + '\n'
+          let updatedPrBody =
+            '\n'
             + '<details>'
             + '<summary>📖 ${{ inputs.module-path }} plan: <code>${{ steps.terraform-plan.outcome }}</code></summary>\n'
             + '\n```hcl\n'
             + PLAN
             + '\n```\n'
             + '</details>\n'
-            + planEndMarker + '\n';
-          const prBody = prResp.data?.body;
+            + '\n';
+          const currentPrBody = prResp.data?.body;
           
-          if (prBody) {
-            if (prBody.includes(planStartMarker)) {
+          if (currentPrBody) {
+            if (currentPrBody.includes(planStartMarker)) {
               console.log(`[add plan to PR] Found '${planStartMarker}'`);
           
-              planBody = prBody.replace(
+              updatedPrBody = currentPrBody.replace(
                 new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
-                planBody
+                updatedPrBody
               );
             } else {
               console.log(`[add plan to PR] '${planStartMarker}' was not found`);
           
-              planBody = prBody + '\n' + planBody;
+              updatedPrBody = currentPrBody + '\n' + updatedPrBody;
             }
           }
-          console.log(`[add plan to PR] Update PR description to:\n${planBody.substring(0, 200)}[...]`);
+          console.log(`[add plan to PR] Update PR description to:\n${updatedPrBody.substring(0, 200)}[...]`);
           
           await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: PULL_REQ_NUMBER,
-              planBody,
+              updatedPrBody,
           });
 
     - name: Release - on production - terraform apply [on master]
