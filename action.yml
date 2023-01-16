@@ -153,11 +153,15 @@ runs:
 
           if (prResp.data?.body) {
             if (prResp.data.body.includes(planStartMarker)) {
+              console.log(`Found '${planStartMarker}'`);
+          
               planBody = prResp.data.body.replace(
                 new RegExp(planStartMarker + '.*' + planEndMarker, 's'), 
                 planBody
               );
             } else {
+              console.log(`'${planStartMarker}' was not found`);
+          
               planBody = prResp.data.body + '\n' + planBody;
             }
           }
