@@ -129,7 +129,7 @@ runs:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
         PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
       with:
-        github-token: ${{ inputs.pgk-token }}
+        github-token: ${{ inputs.pkg-token }}
         script: |
           const { PULL_REQ_NUMBER, PLAN } = process.env;
           const prResp = await github.rest.pulls.get({
