@@ -12,17 +12,13 @@ inputs:
     default: 'terraform'
 
   pkg-token:
-    description: 'User token used by Terraform for cloning 1up-infrastructure modules (same as spring-media GitHub packages token)'
+    description: 'spring-media GitHub packages token. Used for calling the GitHub API and by Terraform for cloning 1up-infrastructure modules'
     required: true
 
   docker-image-tag:
     description: 'Docker image build tag used as "revision" variable'
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
-
-  github-token:
-    description: 'Automatically generated GitHub Actions secret'
-    required: true
 
   staging:
     description: 'Release to staging environment'
@@ -31,7 +27,7 @@ inputs:
 
 outputs:
   infrastructure-changes:
-    description: "Flag indicating found changes in the terraform module"
+    description: 'Flag indicating found changes in the terraform stack dir, passed as "module-path"'
     value: ${{ steps.infrastructure-changes.outputs.found }}
 
 runs:
@@ -42,7 +38,6 @@ runs:
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
-#        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
 
     - uses: dorny/paths-filter@v2
       id: infrastructure-changes
@@ -127,7 +122,7 @@ runs:
       uses: actions/github-script@v6
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
-        PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
+        PLAN: ${{ steps.terraform-plan.outputs.stdout }}
       with:
         github-token: ${{ inputs.pkg-token }}
         script: |
