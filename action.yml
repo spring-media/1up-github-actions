@@ -4,24 +4,24 @@ description: 'Plan/deploy Terraform stacks'
 
 inputs:
   service-name:
-    description: 'Service name, used to derive Terraform state file on backend'
+    description: 'Used to derive Terraform state file on backend: ecs_service_{service-name}'
     required: true
   module-path:
-    description: 'Path to the Terraform stack dir'
+    description: 'Relative path to the Terraform stack dir'
     required: false
     default: 'terraform'
 
   pkg-token:
-    description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
+    description: 'User token used by Terraform for cloning 1up-infrastructure modules (same as spring-media GitHub packages token)'
     required: true
 
   docker-image-tag:
-    description: 'Docker image build tag used when pushing to the 1up AWS ECR'
+    description: 'Docker image build tag used as "revision" variable'
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
 
   github-token:
-    description: Github token, current token from secrets
+    description: 'Automatically generated GitHub Actions secret'
     required: true
 
   staging:
@@ -42,7 +42,7 @@ runs:
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
-        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
+#        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
 
     - uses: dorny/paths-filter@v2
       id: infrastructure-changes
@@ -129,7 +129,7 @@ runs:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
         PLAN: "${{ steps.terraform-plan.outputs.stdout }}"
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.pgk-token }}
         script: |
           const { PULL_REQ_NUMBER, PLAN } = process.env;
           const prResp = await github.rest.pulls.get({
