@@ -54,7 +54,7 @@ runs:
       if: steps.infrastructure-changes.outputs.found == 'true'
       shell: bash
       run: |
-        git config --local --remove-section http."https://github.com/"
+        git config --local --remove-section http."https://github.com/" || true
         git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
 
 
