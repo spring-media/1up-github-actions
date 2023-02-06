@@ -16,10 +16,6 @@ inputs:
     required: false
     default: '933782373565.dkr.ecr.eu-west-1.amazonaws.com'
 
-  github-token:
-    description: Github token, current token from secrets
-    required: true
-
   staging:
     description: 'Release to staging environment'
     required: false
@@ -45,7 +41,6 @@ runs:
       shell: bash
       run: |
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
-        [[ "${{ inputs.github-token }}" ]] || { echo "input 'github-token' cannot be blank"; exit 1; }
 
     - name: Setup service name
       run: |
