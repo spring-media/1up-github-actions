@@ -90,7 +90,6 @@ runs:
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
-        github-token: ${{ inputs.github-token }}
         staging: ${{ inputs.staging }}
 
     - name: Release - on staging
