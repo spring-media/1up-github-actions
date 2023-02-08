@@ -40,10 +40,6 @@ inputs:
     description: 'Slack channel webhook URL used when reporting master build status'
     required: true
 
-  github-token:
-    description: Github token, current token from secrets
-    required: false
-
   staging:
     description: 'Release to staging environment'
     required: false
@@ -175,7 +171,6 @@ runs:
       with:
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
-        github-token: ${{ inputs.github-token }}
         staging: ${{ inputs.staging }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
 
