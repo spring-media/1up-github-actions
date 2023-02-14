@@ -92,7 +92,7 @@ runs:
       if: steps.infrastructure-changes.outputs.found == 'true'
       working-directory: ${{ inputs.module-path }}
       run: |
-        rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
+        rm -rf .terraform.lock.hcl .terraform || true
         terraform init
         terraform validate
         terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
