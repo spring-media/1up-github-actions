@@ -17,7 +17,7 @@ Composite GitHub Actions used as shared builds by 1up-team
 
 - [spring-media/1up-github-actions@build-nodejs-lambda](https://github.com/spring-media/1up-github-actions/tree/build-nodejs-lambda)
 
-- [spring-media/1up-github-actions@build-ecs-nodejs](https://github.com/spring-media/1up-github-actions/tree/spring-media/build-ecs-nodejs)
+- [spring-media/1up-github-actions@build-ecs-nodejs](https://github.com/spring-media/1up-github-actions/tree/build-ecs-nodejs)
 
 
 ## Job Steps
