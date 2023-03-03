@@ -129,6 +129,8 @@ runs:
     - name: Build - Sonar - Analyze
       if: inputs.sonar-token
       env:
+        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
+        GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
         SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
