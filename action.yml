@@ -52,7 +52,7 @@ runs:
       shell: bash
 
     - name: ︎Setup - Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: ︎Setup - Node
       uses: actions/setup-node@v3
@@ -68,26 +68,11 @@ runs:
       shell: bash
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
         aws-region: eu-west-1
-
-    - name: Setup - Report [on master]
-      if: always() && github.ref == 'refs/heads/master'
-      run: |
-        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
-        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
-        GIT_REPO_URL="https://github.com/${{ github.repository }}"
-        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
-        GIT_REPO_NAME="${{ github.repository }}"
-        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
-        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
-        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
-      shell: bash
-
 
     - name: Build - echo
       run: echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
@@ -104,7 +89,6 @@ runs:
         junit_files: coverage/**/*.xml
         comment_mode: off
 
-
     - name: Release - on production - echo [on master]
       if: github.ref == 'refs/heads/master'
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
@@ -120,15 +104,68 @@ runs:
       run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
       shell: bash
 
-    - name: Report - When Success [on master]
+    - name: Setup - Report [on master]
+      if: always() && github.ref == 'refs/heads/master'
+      run: |
+        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
+        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
+        GIT_REPO_URL="https://github.com/${{ github.repository }}"
+        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
+        GIT_REPO_NAME="${{ github.repository }}"
+        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
+        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
+        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Report - success [on master]
       if: success() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.0.2
+      uses: slackapi/slack-github-action@v1
       env:
-        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
-        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases", "attachments":[{"color": "#2eb886", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": "{{ GIT_ACTIONS_URL }} released\n{{ GIT_PR_MSG }}"}}]}]}'
-    - name: Report - When Failure [on master]
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
+      with:
+        channel-id: "1up-releases"
+        payload: |
+          {
+            "attachments": [
+              {
+                "color": "#2eb886",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+
+    - name: Report - failure [on master]
       if: failure() && github.ref == 'refs/heads/master'
-      uses: Ilshidur/action-slack@2.0.2
+      uses: slackapi/slack-github-action@v1
       env:
-        SLACK_WEBHOOK: ${{ inputs.up-slack-webhook-url }}
-        SLACK_CUSTOM_PAYLOAD: '{"channel": "1up-releases",  "attachments":[{"color": "#ed2f00", "blocks":[{"type":"section","text":{"type":"mrkdwn","text": ":boom: {{ GIT_ACTIONS_URL }} failed!\n{{ GIT_PR_MSG }}"}}]}]}'
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
+      with:
+        channel-id: "1up-releases"
+        payload: |
+          {
+            "attachments": [
+              {
+                "color": "#ed2f00",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": ":boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
