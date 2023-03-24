@@ -205,6 +205,7 @@ runs:
 
 
     - name: Release - on production - echo
+      if: github.ref == 'refs/heads/master' 
       shell: bash
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
 
