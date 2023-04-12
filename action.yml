@@ -20,6 +20,9 @@ inputs:
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
+  snyk-token:
+    description: 'Token used for Snyk analysis on vulnerabilities'
+    required: false
 
   up-aws-access-key-id:
     description: 'AWS access key id secret used to integrate with aws-cli or docker repository'
@@ -78,7 +81,7 @@ runs:
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v1-node16
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
@@ -135,6 +138,23 @@ runs:
         SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
       run: ./gradlew sonar --info
+
+
+
+    - name: Build - Snyk - echo
+      if: inputs.snyk-token
+      shell: bash
+      run: echo -e "🔔\n🔔       S N Y K       \n🔔"
+
+    - uses: snyk/actions/setup@master
+
+    - name: Build - Snyk - Analyze
+      if: inputs.snyk-token
+      shell: bash
+      env:
+        SNYK_TOKEN: ${{ inputs.snyk-token }}
+      run: |
+        snyk code test --severity-threshold=high --fail-on=patchable
 
 
 
