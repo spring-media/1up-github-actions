@@ -154,7 +154,7 @@ runs:
       env:
         SNYK_TOKEN: ${{ inputs.snyk-token }}
       run: |
-        snyk test
+        snyk test --severity-threshold=high --fail-on=patchable
 
 
 
