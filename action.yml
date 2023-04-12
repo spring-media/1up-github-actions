@@ -142,14 +142,15 @@ runs:
 
 
     - name: Build - Snyk - echo
-      if: inputs.snyk-token
+      if: inputs.snyk-token && github.ref == 'refs/heads/master'
       shell: bash
       run: echo -e "🔔\n🔔       S N Y K       \n🔔"
 
     - uses: snyk/actions/setup@master
+      if: inputs.snyk-token && github.ref == 'refs/heads/master'
 
     - name: Build - Snyk - Analyze
-      if: inputs.snyk-token
+      if: inputs.snyk-token && github.ref == 'refs/heads/master'
       shell: bash
       env:
         SNYK_TOKEN: ${{ inputs.snyk-token }}
