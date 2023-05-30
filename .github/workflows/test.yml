@@ -12,7 +12,7 @@ jobs:
       - name: test
         shell: bash
         env:
-          SUCCESS_MSG: ''
+          SUCCESS_MSG: 'successful foobar'
           FAILURE_MSG: ''
         run: |
           SUCCESS_FB='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
