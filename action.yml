@@ -7,11 +7,18 @@ inputs:
     description: 'Slack channel webhook URL to report to'
     required: true
 
+  success-message:
+    description: "Slack message to send on success"
+    required: false
+
+  failure-message:
+    description: "Slack message to send on failure"
+    required: false
+
 runs:
   using: composite
   steps:
-    - name: Report - setup [on master]
-      if: always() && github.ref == 'refs/heads/master'
+    - if: always() && github.ref == 'refs/heads/master'
       shell: bash
       run: |
         GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
@@ -23,6 +30,19 @@ runs:
         echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
         [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
+
+    - if: always() && github.ref == 'refs/heads/master'
+      shell: bash
+      env:
+        SUCCESS_PARAM: '${{ inputs.success-message }}'
+        FAILURE_PARAM: '${{ inputs.failure-message }}'
+      run: |
+        SUCCESS_FALLBACK='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
+        FAILURE_FALLBACK=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
+        SUCCESS_MESSAGE="${SUCCESS_PARAM:-$SUCCESS_FALLBACK}"
+        FAILURE_MESSAGE="${FAILURE_PARAM:-$FAILURE_FALLBACK}"
+        echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
+        echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
     - name: Report - success [on master]
       if: success() && github.ref == 'refs/heads/master'
@@ -39,7 +59,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
+                  "text": "${{ env.SUCCESS_MESSAGE }}"
                 }
               }]
             }]
@@ -60,7 +80,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": ":boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}"
+                  "text": "${{ env.FAILURE_MESSAGE }}"
                 }
               }]
             }]
