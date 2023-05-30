@@ -12,8 +12,8 @@ jobs:
       - name: test
         shell: bash
         env:
-          SUCCESS_MSG: 'successful foobar'
-          FAILURE_MSG: ''
+          SUCCESS_MSG: '${{ github.run_number }} succeeded'
+          FAILURE_MSG: '${{ github.run_number }} failed'
         run: |
           SUCCESS_FB='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
           FAILURE_FB=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
