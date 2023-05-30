@@ -17,5 +17,7 @@ jobs:
         run: |
           SUCCESS_MESSAGE=${{ env.SUCCESS_MSG }}
           FAILURE_MESSAGE=${{ env.FAILURE_MSG }}
-          echo "SUCCESS_MESSAGE=${SUCCESS_MESSAGE:-'${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'}" >> $GITHUB_ENV
-          echo "FAILURE_MESSAGE=${FAILURE_MESSAGE:-':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'}" >> $GITHUB_ENV
+          SUCCESS_FB='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
+          FAILURE_FB=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
+          echo "SUCCESS_MESSAGE=${SUCCESS_MESSAGE:-$SUCCESS_FB}" >> $GITHUB_ENV
+          echo "FAILURE_MESSAGE=${FAILURE_MESSAGE:-$FAILURE_FB}" >> $GITHUB_ENV
