@@ -21,5 +21,5 @@ jobs:
           FAILURE_FB=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
           echo "SUCCESS_MESSAGE=${SUCCESS_MESSAGE:-$SUCCESS_FB}" >> $GITHUB_ENV
           echo "FAILURE_MESSAGE=${FAILURE_MESSAGE:-$FAILURE_FB}" >> $GITHUB_ENV
-          echo ${{ SUCCESS_MESSAGE }}
-          echo ${{ FAILURE_MESSAGE }}
+          echo $SUCCESS_MESSAGE
+          echo $FAILURE_MESSAGE
