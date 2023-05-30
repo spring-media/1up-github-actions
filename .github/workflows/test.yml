@@ -9,7 +9,7 @@ jobs:
   test_action:
     runs-on: ubuntu-latest
     steps:
-      - if: always()
+      - name: test
         shell: bash
         env:
           SUCCESS_MSG: ''
@@ -17,9 +17,11 @@ jobs:
         run: |
           FAILURE_FB=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
           SUCCESS_FB='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
-          SUCCESS_MESSAGE=${${{ env.SUCCESS_MSG }}:-$SUCCESS_FB}
-          FAILURE_MESSAGE=${${{ env.FAILURE_MSG }}:-$FAILURE_FB}
-          echo "SUCCESS_MESSAGE=${SUCCESS_MESSAGE:-$SUCCESS_FB}" >> $GITHUB_ENV
-          echo "FAILURE_MESSAGE=${FAILURE_MESSAGE:-$FAILURE_FB}" >> $GITHUB_ENV
-          echo $SUCCESS_MESSAGE
-          echo $FAILURE_MESSAGE
+          SUCCESS_PARAM=${{ env.SUCCESS_MSG }}
+          FAILURE_PARAM=${{ env.FAILURE_MSG }}
+          SUCCESS_MESSAGE=${SUCCESS_PARAM:-$SUCCESS_FB}
+          FAILURE_MESSAGE=${FAILURE_PARAM:-$FAILURE_FB}
+          echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
+          echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
+          echo "::notice $SUCCESS_MESSAGE"
+          echo "::notice FAILURE_MESSAGE"
