@@ -24,7 +24,7 @@ jobs:
           echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
           echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
-      - name: test
+      - name: test2
         shell: bash
         run: |
           echo ${{ toJSON(env.SUCCESS_MESSAGE) }}
