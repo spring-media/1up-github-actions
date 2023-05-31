@@ -258,6 +258,6 @@ runs:
 
     - name: Report - [on master]
       if: always()
-      uses: spring-media/1up-github-actions@ONEUP-6419-notification-action
+      uses: spring-media/1up-github-actions@send-notifications
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
