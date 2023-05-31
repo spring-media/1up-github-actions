@@ -59,7 +59,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "${{ env.SUCCESS_MESSAGE }}"
+                  "text": "${{ toJSON(env.SUCCESS_MESSAGE) }}"
                 }
               }]
             }]
@@ -80,7 +80,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "${{ env.FAILURE_MESSAGE }}"
+                  "text": "${{ toJSON(env.FAILURE_MESSAGE) }}"
                 }
               }]
             }]
