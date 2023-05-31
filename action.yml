@@ -256,68 +256,8 @@ runs:
       shell: bash
       run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
 
-    - name: Setup - Report [on master]
-      if: always() && github.ref == 'refs/heads/master'
-      shell: bash
-      run: |
-        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
-        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
-        GIT_REPO_URL="https://github.com/${{ github.repository }}"
-        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
-        GIT_REPO_NAME="${{ github.repository }}"
-        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
-        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
-        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
-
-    - name: Report - success [on master]
-      if: success() && github.ref == 'refs/heads/master'
-      uses: slackapi/slack-github-action@v1
-      env:
-        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
+    - name: Report - [on master]
+      if: always()
+      uses: spring-media/1up-github-actions@send-notifications
       with:
-        channel-id: "1up-releases"
-        payload: |
-          {
-            "attachments": [
-              {
-                "color": "#2eb886",
-                "blocks": [
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}"
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-
-    - name: Report - failure [on master]
-      if: failure() && github.ref == 'refs/heads/master'
-      uses: slackapi/slack-github-action@v1
-      env:
-        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ inputs.up-slack-webhook-url }}
-      with:
-        channel-id: "1up-releases"
-        payload: |
-          {
-            "attachments": [
-              {
-                "color": "#ed2f00",
-                "blocks": [
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": ":boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}"
-                    }
-                  }
-                ]
-              }
-            ]
-          }
+        slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
