@@ -6,11 +6,9 @@ inputs:
   slack-webhook-url:
     description: 'Slack channel webhook URL to report to'
     required: true
-
   success-message:
     description: "Slack message to send on success"
     required: false
-
   failure-message:
     description: "Slack message to send on failure"
     required: false
@@ -22,12 +20,11 @@ runs:
       shell: bash
       run: |
         GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_COMMIT_MSG_NO_SUFFIX="${GIT_COMMIT_MSG#*\(#}"
-        GIT_PR="${GIT_COMMIT_MSG_NO_SUFFIX%\)*}"
-        GIT_REPO_URL="https://github.com/${{ github.repository }}"
-        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
         GIT_REPO_NAME="${{ github.repository }}"
-        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
+        GIT_REPO_URL="https://github.com/${{ github.repository }}"
+        GIT_PR=$(echo $GIT_COMMIT_MSG | sed -r 's/.*#([0-9]+).*/\1/')
+        GIT_PR_URL="$GIT_REPO_URL/pull/$GIT_PR"
+        echo "GIT_ACTIONS_URL=<$GIT_REPO_URL/actions/runs/${{ github.run_id }}|1up-bff / ${{ env.SERVICE_NAME }}>" >> $GITHUB_ENV
         [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
