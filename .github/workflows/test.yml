@@ -25,3 +25,4 @@ jobs:
           echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
           echo $SUCCESS_MESSAGE
           echo $FAILURE_MESSAGE
+          echo ${{ toJSON('{"text": "${{ env.SUCCESS_MESSAGE }}"') }}
