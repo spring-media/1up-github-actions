@@ -24,3 +24,4 @@ Composite GitHub Actions used as shared builds by 1up-team
 > Contains the minimal steps required to support other Build Steps or workflows
 
 - [spring-media/1up-github-actions@deploy-infrastructure](https://github.com/spring-media/1up-github-actions/tree/deploy-infrastructure)
+- [spring-media/1up-github-actions@send-notifications](https://github.com/spring-media/1up-github-actions/tree/send-notifications)
