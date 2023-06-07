@@ -19,6 +19,7 @@ jobs:
             core.setFailed('this is not fine')
 
       - name: monitor scenario
+        if: always()
         shell: bash
         run: |
           echo ${{ github.action_status }}
