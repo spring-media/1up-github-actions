@@ -12,7 +12,7 @@ jobs:
       - name: fail on purpose
         shell: bash
         run: |
-          cp foo /bar
+          echo 'this is fine'
 
       - name: Report
         if: always()
