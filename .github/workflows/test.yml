@@ -9,6 +9,9 @@ jobs:
   test_action:
     runs-on: ubuntu-latest
     steps:
+      - name: ︎Setup - Checkout
+        uses: actions/checkout@v3
+
       - name: scenario
         shell: bash
         run: |
