@@ -18,6 +18,11 @@ jobs:
           script: |
             core.setFailed('this is not fine')
 
+      - name: monitor scenario
+        shell: bash
+        run: |
+          echo ${{ github.action_status }}
+
       - name: Report
         if: always()
         uses: spring-media/1up-github-actions@send-notifications
