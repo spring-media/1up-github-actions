@@ -21,3 +21,4 @@ jobs:
           slack-webhook-url: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
           success-message: "Ignore me, i am a success message"
           failure-message: "Ignore me, i am a failure message"
+          always-notify: 'true'
