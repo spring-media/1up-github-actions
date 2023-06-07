@@ -7,16 +7,20 @@ inputs:
     description: 'Slack channel webhook URL to report to'
     required: true
   success-message:
-    description: "Slack message to send on success"
+    description: 'Slack message to send on success'
     required: false
   failure-message:
-    description: "Slack message to send on failure"
+    description: 'Slack message to send on failure'
     required: false
+  always-notify:
+    description: 'Override switch to always send notifications regardless the current branch'
+    required: false
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    - if: always() && github.ref == 'refs/heads/master'
+    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
         GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
@@ -25,18 +29,18 @@ runs:
         [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
-    - if: always() && github.ref == 'refs/heads/master' && github.repository == 'spring-media/1up-bff'
+    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && github.repository == 'spring-media/1up-bff'
       shell: bash
       run: |
         echo "GIT_ACTIONS_URL=<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|1up-bff / ${{ env.SERVICE_NAME }}>" >> $GITHUB_ENV
 
-    - if: always() && github.ref == 'refs/heads/master' && github.repository != 'spring-media/1up-bff'
+    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && github.repository != 'spring-media/1up-bff'
       shell: bash
       run: |
         GIT_REPO_NAME="${{ github.repository }}"
         echo "GIT_ACTIONS_URL=<https://github.com/${GIT_REPO_NAME}/actions/runs/${{ github.run_id }}|${GIT_REPO_NAME#*/}>" >> $GITHUB_ENV
 
-    - if: always() && github.ref == 'refs/heads/master'
+    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       env:
         SUCCESS_PARAM: '${{ inputs.success-message }}'
@@ -50,7 +54,7 @@ runs:
         echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
     - name: Report - success [on master]
-      if: success() && github.ref == 'refs/heads/master'
+      if: success() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
@@ -71,7 +75,7 @@ runs:
           }
 
     - name: Report - failure [on master]
-      if: failure() && github.ref == 'refs/heads/master'
+      if: failure() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
