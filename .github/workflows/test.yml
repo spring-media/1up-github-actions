@@ -9,22 +9,15 @@ jobs:
   test_action:
     runs-on: ubuntu-latest
     steps:
-      - name: test
+      - name: fail on purpose
         shell: bash
-        env:
-          SUCCESS_MSG: 'run "#${{ github.run_number }}" succeeded'
-          FAILURE_MSG: 'run "#${{ github.run_number }}" failed'
         run: |
-          SUCCESS_FB='${{ env.GIT_ACTIONS_URL }} deployed successfully!\n${{ env.GIT_PR_MSG }}'
-          FAILURE_FB=':boom: ${{ env.GIT_ACTIONS_URL }} failed!\n${{ env.GIT_PR_MSG }}'
-          SUCCESS_PARAM="${{ env.SUCCESS_MSG }}"
-          FAILURE_PARAM="${{ env.FAILURE_MSG }}"
-          SUCCESS_MESSAGE="${SUCCESS_MSG:-$SUCCESS_FB}"
-          FAILURE_MESSAGE="${FAILURE_MSG:-$FAILURE_FB}"
-          echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
-          echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
+          cp foo /bar
 
-      - name: test2
-        shell: bash
-        run: |
-          echo ${{ toJSON(env.SUCCESS_MESSAGE) }}
+      - name: Report
+        if: always()
+        uses: spring-media/1up-github-actions@send-notifications
+        with:
+          slack-webhook-url: ${{ secrets.UP_SLACK_WEBHOOK_URL }}
+          success-message: "Ignore me, i am a success message"
+          failure-message: "Ignore me, i am a failure message"
