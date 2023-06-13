@@ -20,6 +20,14 @@ inputs:
 runs:
   using: composite
   steps:
+
+    - name: monitor
+      if: always()
+      shell: bash
+      run: |
+        echo ${{ github.action_status }}
+        echo ${{ job.status }}
+
     - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
