@@ -20,14 +20,6 @@ inputs:
 runs:
   using: composite
   steps:
-
-    - name: monitor
-      if: always()
-      shell: bash
-      run: |
-        echo ${{ github.action_status }}
-        echo ${{ job.status }}
-
     - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
@@ -62,7 +54,7 @@ runs:
         echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
     - name: Report - success [on master]
-      if: success() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if: job.status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
@@ -83,7 +75,7 @@ runs:
           }
 
     - name: Report - failure [on master]
-      if: failure() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if: job.status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
