@@ -23,8 +23,7 @@ jobs:
         shell: bash
         run: |
           echo ${{ github.action_status }}
-          echo ${{ success() }}
-          echo ${{ failure() }}
+          echo ${{ job.status }}
 
       - name: Report
         if: always()
