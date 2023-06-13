@@ -12,11 +12,11 @@ jobs:
       - name: ︎Setup - Checkout
         uses: actions/checkout@v3
 
-      - name: scenario
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.setFailed('this is not fine')
+#      - name: scenario
+#        uses: actions/github-script@v6
+#        with:
+#          script: |
+#            core.setFailed('this is not fine')
 
       - name: monitor scenario
         if: always()
