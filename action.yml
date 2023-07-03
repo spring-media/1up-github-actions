@@ -17,9 +17,9 @@ inputs:
     description: 'Gradle wrapper run command'
     required: false
     default: './gradlew --no-daemon --info clean build'
-  sonar-token:
-    description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
-    required: false
+  sonar:
+    description: 'Flag used to scan sonar. If set to true, will run sonar scan'
+    default: false
   snyk-token:
     description: 'Token used for Snyk analysis on vulnerabilities'
     required: false
@@ -117,12 +117,12 @@ runs:
 
 
     - name: Build - Sonar - echo
-      if: inputs.sonar-token
+      if: inputs.sonar
       shell: bash
       run: echo -e "🔔\n🔔       S O N A R       \n🔔"
 
     - name: Build - Sonar - Cache
-      if: inputs.sonar-token
+      if: inputs.sonar
       uses: actions/cache@v3
       with:
         path: ~/.sonar/cache
@@ -130,12 +130,11 @@ runs:
         restore-keys: ${{ runner.os }}-sonar
 
     - name: Build - Sonar - Analyze
-      if: inputs.sonar-token
+      if: inputs.sonar
       env:
         GITHUB_PKG_USER: ${{ inputs.pkg-user }}
         GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
-        SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
       run: ./gradlew sonar --info
 
