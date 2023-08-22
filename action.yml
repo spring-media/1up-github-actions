@@ -32,6 +32,15 @@ inputs:
     description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
     required: true
 
+  app-path:
+    description: 'Path to the deployable app directory'
+    required: false
+    default: '.'
+  terraform-module-path:
+    description: 'Path to the corresponding app terraform directory'
+    required: false
+    default: 'terraform'
+
 runs:
   using: composite
   steps:
@@ -61,6 +70,7 @@ runs:
 
     - name: Docker - build image
       shell: bash
+      working-directory: ${{ inputs.app-path }}
       run: |
         DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
         docker build -t $DOCKER_IMAGE .
@@ -86,6 +96,7 @@ runs:
         pkg-token: ${{ inputs.pkg-token }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
         staging: ${{ inputs.staging }}
+        module-path: ${{ inputs.terraform-module-path }}
 
     - name: Release - on staging
       if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
