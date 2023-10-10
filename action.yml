@@ -6,6 +6,9 @@ inputs:
   slack-webhook-url:
     description: 'Slack channel webhook URL to report to'
     required: true
+  parent-job-status:
+    description: 'parent job status'
+    required: true
   service-name:
     description: 'Explicit service name in case the repository does not represent a single service (monorepo)'
     required: false
@@ -58,7 +61,7 @@ runs:
         echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
     - name: Report - success [on master]
-      if: job.status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if:  ${{ inputs.parent-job-status }} == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
@@ -79,7 +82,7 @@ runs:
           }
 
     - name: Report - failure [on master]
-      if: job.status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if: ${{ inputs.parent-job-status }} == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
