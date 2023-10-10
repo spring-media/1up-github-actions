@@ -26,6 +26,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Setup - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.slack-webhook-url }}" ]] || { echo "input 'slack-webhook-url' cannot be blank"; exit 1; }
+        [[ "${{ inputs.up-aws-access-key-id }}" ]] || { echo "input 'parent-job-status' cannot be blank"; exit 1; }
+
     - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
