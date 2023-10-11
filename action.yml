@@ -64,7 +64,10 @@ runs:
         [[ "${{ inputs.up-slack-webhook-url }}" ]] || { echo "input 'up-slack-webhook-url' cannot be blank"; exit 1; }
 
     - name: ︎Setup - Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        show-progress: false
+        fetch-depth: 0
 
     - name: ︎Setup - Java
       uses: actions/setup-java@v3
