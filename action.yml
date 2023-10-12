@@ -23,7 +23,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+    - if: always() && (inputs.always-notify == 'true')
       shell: bash
       run: |
         GIT_SHORT_REPO_NAME=${GITHUB_REPOSITORY##*/}
@@ -34,17 +34,17 @@ runs:
         echo "GIT_SHORT_REPO_NAME=$GIT_SHORT_REPO_NAME" >> $GITHUB_ENV
         echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
 
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && inputs.service-name == null
+    - if: always() && (inputs.always-notify == 'true') && inputs.service-name == null
       shell: bash
       run: |
         echo "GIT_ACTIONS_URL=<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|$GIT_SHORT_REPO_NAME>" >> $GITHUB_ENV
 
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && inputs.service-name != null
+    - if: always() && ( inputs.always-notify == 'true') && inputs.service-name != null
       shell: bash
       run: |
         echo "GIT_ACTIONS_URL=<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|$GIT_SHORT_REPO_NAME / ${{ inputs.service-name }}>" >> $GITHUB_ENV
 
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+    - if: always() && ( inputs.always-notify == 'true')
       shell: bash
       env:
         SUCCESS_PARAM: '${{ inputs.success-message }}'
@@ -58,7 +58,7 @@ runs:
         echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
 
     - name: Report - success [on master]
-      if: job.status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if: job.status == 'success' && ( inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
@@ -79,7 +79,7 @@ runs:
           }
 
     - name: Report - failure [on master]
-      if: job.status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      if: job.status == 'failure' && (inputs.always-notify == 'true')
       uses: slackapi/slack-github-action@v1
       env:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
