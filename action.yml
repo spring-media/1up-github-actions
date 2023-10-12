@@ -138,7 +138,7 @@ runs:
 
     - name: Report - [on master]
       if: always()
-      uses: spring-media/1up-github-actions@send-notifications
+      uses: spring-media/1up-github-actions@send-notifications-test
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
         parent-job-status: ${{ job.status }}
