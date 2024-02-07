@@ -86,7 +86,7 @@ runs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        junit_files: coverage/**/*.xml
+        junit_files: "**/coverage/**/*.xml"
         comment_mode: off
 
     - name: Release - on production - echo [on master]
@@ -96,7 +96,7 @@ runs:
 
     - name: Release - on production [on master]
       if: github.ref == 'refs/heads/master'
-      run: npm run sam:deploy
+      run: sam deploy -no-confirm-changeset --no-fail-on-empty-changeset
       shell: bash
 
     - name: Report - echo [on master]
