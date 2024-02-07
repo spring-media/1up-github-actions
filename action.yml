@@ -96,7 +96,7 @@ runs:
 
     - name: Release - on production [on master]
       if: github.ref == 'refs/heads/master'
-      run: npm run sam:deploy
+      run: sam deploy -no-confirm-changeset --no-fail-on-empty-changeset
       shell: bash
 
     - name: Report - echo [on master]
