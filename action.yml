@@ -257,14 +257,14 @@ runs:
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       shell: bash
-      run: echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME status:$STATUS_NAME     \n🔔\n🔔"
+      run: echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
       env:
         JOB_STATUS_NAME: ${{ job.status }}
-        STATUS_NAME: ${{ success() && 'success' || 'failure' }}
+        ACTION_STATUS_NAME: ${{ github.action_status }}
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
       uses: spring-media/1up-github-actions@send-notifications
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
-        parent-job-status: ${{ success() && 'success' || 'failure' }}
+        parent-job-status: ${{ github.action_status }}
