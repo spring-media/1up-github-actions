@@ -112,7 +112,7 @@ runs:
 
     - name: Build - Gradle - Annotate Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
+      if: ${{ !cancelled() }}
       with:
         junit_files: '**/test-results/**/*.xml'
         comment_mode: off
@@ -257,11 +257,14 @@ runs:
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       shell: bash
-      run: echo -e "🔔\n🔔\n🔔       R E P O R T       \n🔔\n🔔"
+      run: echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME status:$STATUS_NAME     \n🔔\n🔔"
+      env:
+        JOB_STATUS_NAME: ${{ job.status }}
+        STATUS_NAME: ${{ success() && 'success' || 'failure' }}
 
     - name: Report - [on master]
-      if: always()
+      if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
       uses: spring-media/1up-github-actions@send-notifications
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
-        parent-job-status: job.status
+        parent-job-status: ${{ success() && 'success' || 'failure' }}
