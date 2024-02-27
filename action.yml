@@ -264,4 +264,4 @@ runs:
       uses: spring-media/1up-github-actions@send-notifications
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
-        parent-job-status: ${{ job.status }}
+        parent-job-status: job.status
