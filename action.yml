@@ -174,7 +174,7 @@ runs:
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
 
     - name: Release - push Docker image [on master]
-      if: ${{ inputs.staging == 'true' }} || github.ref == 'refs/heads/master'
+      if: inputs.staging == 'true' || github.ref == 'refs/heads/master'
       shell: bash
       run: docker push ${{ env.DOCKER_IMAGE }}
 
@@ -203,12 +203,12 @@ runs:
 
 
     - name: Release - on staging - echo
-      if: ${{ inputs.staging == 'true' }}
+      if: inputs.staging == 'true'
       shell: bash
       run: echo -e "🔔       R E L E A S E      S T A G I N G"
 
     - name: Release - on staging
-      if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
+      if: inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false'
       uses: silinternational/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
