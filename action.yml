@@ -16,7 +16,7 @@ inputs:
   gradle-cmd:
     description: 'Gradle wrapper run command'
     required: false
-    default: './gradlew --no-daemon --info clean build'
+    default: './gradlew --no-daemon --info build'
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
