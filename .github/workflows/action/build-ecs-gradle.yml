@@ -193,7 +193,7 @@ runs:
 
     - name: Release - terraform
       if: steps.infrastructure-changes.outputs.terraform == 'true'
-      uses: spring-media/1up-github-actions@deploy-infrastructure
+      uses: spring-media/1up-github-actions/.github/workflows/actions/deploy-infrastructure.yml
       with:
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
@@ -264,7 +264,7 @@ runs:
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
-      uses: spring-media/1up-github-actions@send-notifications
+      uses: spring-media/1up-github-actions/.github/workflows/actions/send-notifications.yml
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
         parent-job-status: ${{ github.action_status }}
