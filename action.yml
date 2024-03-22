@@ -16,7 +16,7 @@ inputs:
   gradle-cmd:
     description: 'Gradle wrapper run command'
     required: false
-    default: './gradlew --no-daemon --info clean build'
+    default: './gradlew --no-daemon --info build'
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
@@ -24,20 +24,29 @@ inputs:
     description: 'Token used for Snyk analysis on vulnerabilities'
     required: false
 
+  aws-region:
+    description: AWS region
+    required: false
+    default: 'eu-west-1'
   up-aws-access-key-id:
     description: 'AWS access key id secret used to integrate with aws-cli or docker repository'
     required: true
   up-aws-secret-access-key:
     description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
     required: true
+  aws-staging-cluster:
+    description: 'Staging ECS cluster name for the configured AWS region'
+    required: false
+    default: 'up-cluster-staging'
+  aws-production-cluster:
+    description: 'Production ECS cluster name for the configured AWS region'
+    required: false
+    default: 'up-cluster-production'
+
   docker-image-tag:
     description: 'Docker image build tag used when pushing to the 1up AWS ECR'
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
-  docker-registry:
-    description: 'Docker registry URL used when pushing to the 1up AWS ECR'
-    required: false
-    default: '933782373565.dkr.ecr.eu-west-1.amazonaws.com'
 
   up-slack-webhook-url:
     description: 'Slack channel webhook URL used when reporting master build status'
@@ -70,7 +79,7 @@ runs:
         fetch-depth: 0
 
     - name: ︎Setup - Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: ${{ inputs.java-version }}
         distribution: corretto
@@ -84,14 +93,15 @@ runs:
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
-        aws-region: eu-west-1
+        aws-region: ${{ inputs.aws-region }}
 
     - name: ECR setup
-      uses: aws-actions/amazon-ecr-login@v1
+      uses: aws-actions/amazon-ecr-login@v2
+      id: ecr-login
 
 
 
@@ -107,8 +117,6 @@ runs:
         GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
       run: |
         ${{ inputs.gradle-cmd }}
-        rm -f ~/.gradle/caches/modules-2/modules-2.lock
-        rm -f ~/.gradle/caches/modules-2/gc.properties
 
     - name: Build - Gradle - Annotate Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
@@ -124,14 +132,6 @@ runs:
       shell: bash
       run: echo -e "🔔\n🔔       S O N A R       \n🔔"
 
-    - name: Build - Sonar - Cache
-      if: inputs.sonar-token
-      uses: actions/cache@v3
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
-
     - name: Build - Sonar - Analyze
       if: inputs.sonar-token
       env:
@@ -140,7 +140,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
         SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
-      run: ./gradlew sonar --info
+      run: ./gradlew --no-daemon --info sonar
 
 
 
@@ -168,8 +168,10 @@ runs:
 
     - name: Build - Docker Image
       shell: bash
+      env:
+        REGISTRY: ${{ steps.ecr-login.outputs.registry }}
       run: |
-        DOCKER_IMAGE="${{ inputs.docker-registry }}/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
+        DOCKER_IMAGE="$REGISTRY/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
         docker build -t $DOCKER_IMAGE .
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
 
@@ -184,7 +186,7 @@ runs:
       shell: bash
       run: echo -e "🔔       T E R R A F O R M"
 
-    - uses: dorny/paths-filter@v2
+    - uses: dorny/paths-filter@v3
       id: infrastructure-changes
       with:
         filters: |
@@ -216,11 +218,11 @@ runs:
         aws_secret_key_cmd: --aws-secret-key
         aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
         cluster_cmd: --cluster
-        cluster: up-cluster-staging
+        cluster: ${{ inputs.aws-staging-cluster }}
         image_cmd: --image
         image: ${{ env.DOCKER_IMAGE }}
         region_cmd: --region
-        region: eu-west-1
+        region: ${{ inputs.aws-region }}
         service_name_cmd: --service-name
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: --timeout
@@ -229,7 +231,7 @@ runs:
 
 
     - name: Release - on production - echo
-      if: github.ref == 'refs/heads/master' 
+      if: github.ref == 'refs/heads/master'
       shell: bash
       run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
 
@@ -242,11 +244,11 @@ runs:
         aws_secret_key_cmd: --aws-secret-key
         aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
         cluster_cmd: --cluster
-        cluster: up-cluster-production
+        cluster: ${{ inputs.aws-production-cluster }}
         image_cmd: --image
         image: ${{ env.DOCKER_IMAGE }}
         region_cmd: --region
-        region: eu-west-1
+        region: ${{ inputs.aws-region }}
         service_name_cmd: --service-name
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: --timeout
@@ -257,10 +259,14 @@ runs:
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       shell: bash
-      run: echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
       env:
         JOB_STATUS_NAME: ${{ job.status }}
         ACTION_STATUS_NAME: ${{ github.action_status }}
+      run: |
+        echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
+        echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
+        echo '' >> $GITHUB_STEP_SUMMARY
+        echo " - Docker Image Version Tag (revision): `${{ inputs.docker-image-tag }}`" >> $GITHUB_STEP_SUMMARY
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
