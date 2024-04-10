@@ -78,6 +78,7 @@ runs:
 
     - name: Docker - push image
       shell: bash
+      if: github.ref == 'refs/heads/master' 
       run: |
         docker push ${{ env.DOCKER_IMAGE }}
 
