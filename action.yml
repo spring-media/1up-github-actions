@@ -44,7 +44,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup - Validate Inputs
       shell: bash
@@ -59,14 +59,14 @@ runs:
       shell: bash
 
     - name: ︎Setup - AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
         aws-region: eu-west-1
 
     - name: ECR setup
-      uses: aws-actions/amazon-ecr-login@v1
+      uses: aws-actions/amazon-ecr-login@v2
 
     - name: Docker - build image
       shell: bash
@@ -82,7 +82,7 @@ runs:
       run: |
         docker push ${{ env.DOCKER_IMAGE }}
 
-    - uses: dorny/paths-filter@v2
+    - uses: dorny/paths-filter@v3
       id: infrastructure-changes
       with:
         filters: |
