@@ -235,15 +235,18 @@ runs:
     
     - name: Release - publish libraries [on master]
       if: github.ref == 'refs/heads/master' && inputs.publish-libs-enabled == 'true'
+      shell: bash
       run: echo -e "🔔       P U B L I S H      L I B S"
       
     - name: Release - publish libraries [on master]
       if: github.ref == 'refs/heads/master' && inputs.publish-libs-enabled == 'true'
+      shell: bash
       run: ./gradlew --no-daemon --info publish
       env:
         BUILD_NUMBER: ${{ github.run_number }}
         GITHUB_PKG_USER: ${{ secrets.PKG_USER }}
         GITHUB_PKG_TOKEN: ${{ secrets.PKG_TOKEN }}
+
 
     - name: Release - on production - echo
       if: github.ref == 'refs/heads/master'
