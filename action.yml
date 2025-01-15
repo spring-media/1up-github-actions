@@ -244,8 +244,8 @@ runs:
       run: ./gradlew --no-daemon --info publish
       env:
         BUILD_NUMBER: ${{ github.run_number }}
-        GITHUB_PKG_USER: ${{ secrets.PKG_USER }}
-        GITHUB_PKG_TOKEN: ${{ secrets.PKG_TOKEN }}
+        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
+        GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
 
 
     - name: Release - on production - echo
