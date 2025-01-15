@@ -23,7 +23,7 @@ inputs:
   snyk-token:
     description: 'Token used for Snyk analysis on vulnerabilities'
     required: false
- publish-libs-enabled:
+  publish-libs-enabled:
     description: 'Runs ./gradlew publish'
     required: false
     default: 'false'
