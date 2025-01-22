@@ -286,7 +286,7 @@ runs:
         echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
         echo '| Name | Value |' >> $GITHUB_STEP_SUMMARY
         echo '|:-|:-|' >> $GITHUB_STEP_SUMMARY
-        echo "| Docker image | `${{ env.DOCKER_IMAGE }}` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker image | <code>${{ env.DOCKER_IMAGE }}</code> |" >> $GITHUB_STEP_SUMMARY
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
