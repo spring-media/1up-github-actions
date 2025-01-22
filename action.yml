@@ -284,8 +284,9 @@ runs:
       run: |
         echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
         echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
-        echo '' >> $GITHUB_STEP_SUMMARY
-        echo " - Docker Image Tag (revision): `$REVISION`" >> $GITHUB_STEP_SUMMARY
+        echo '| Name | Value |' >> $GITHUB_STEP_SUMMARY
+        echo '|:-|:-|' >> $GITHUB_STEP_SUMMARY
+        echo "| Docker image | `${{ env.DOCKER_IMAGE }}` |" >> $GITHUB_STEP_SUMMARY
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
