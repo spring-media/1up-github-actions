@@ -20,9 +20,6 @@ inputs:
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
-  snyk-token:
-    description: 'Token used for Snyk analysis on vulnerabilities'
-    required: false
   publish-libs-enabled:
     description: 'Runs ./gradlew publish'
     required: false
@@ -47,6 +44,9 @@ inputs:
     required: false
     default: 'up-cluster-production'
 
+  service-name:
+    description: 'Custom name for the ECS service which can be used for mono repos'
+    required: false
   docker-image-tag:
     description: 'Docker image build tag used when pushing to the 1up AWS ECR'
     required: false
@@ -56,6 +56,10 @@ inputs:
     description: 'Slack channel webhook URL used when reporting master build status'
     required: true
 
+  terraform-module-path:
+    description: 'Dir path from where to plan or apply the Terraform config'
+    required: false
+    default: 'terraform'
   staging:
     description: 'Release to staging environment'
     required: false
@@ -74,6 +78,7 @@ runs:
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-access-key-id }}" ]] || { echo "input 'up-aws-access-key-id' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-secret-access-key }}" ]] || { echo "input 'up-aws-secret-access-key' cannot be blank"; exit 1; }
+        [[ "${{ inputs.terraform-module-path }}" ]] || { echo "input 'terraform-module-path' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-slack-webhook-url }}" ]] || { echo "input 'up-slack-webhook-url' cannot be blank"; exit 1; }
 
     - name: ︎Setup - Checkout
@@ -89,11 +94,20 @@ runs:
         distribution: corretto
         cache: gradle
 
-    - name: ︎Setup - Service Name
+    - name: ︎Setup - Service Name - generate
       shell: bash
+      if: ${{ !inputs.service-name }}
       run: |
         SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
-        echo "Setup Service name: $SERVICE_NAME"
+        echo "Generated service name: $SERVICE_NAME"
+        echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+
+    - name: ︎Setup - Service Name - input
+      shell: bash
+      if: inputs.service-name
+      run: |
+        SERVICE_NAME=${{ inputs.service-name }}
+        echo "Configured input service name: $SERVICE_NAME"
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
 
     - name: ︎Setup - AWS Credentials [on master]
@@ -148,24 +162,6 @@ runs:
 
 
 
-    - name: Build - Snyk - echo
-      if: inputs.snyk-token && github.ref != 'refs/heads/master'
-      shell: bash
-      run: echo -e "🔔\n🔔       S N Y K       \n🔔"
-
-    - uses: snyk/actions/setup@master
-      if: inputs.snyk-token && github.ref != 'refs/heads/master'
-
-    - name: Build - Snyk - Analyze
-      if: inputs.snyk-token && github.ref != 'refs/heads/master'
-      shell: bash
-      env:
-        SNYK_TOKEN: ${{ inputs.snyk-token }}
-      run: |
-        snyk code test --severity-threshold=high --fail-on=patchable
-
-
-
     - name: Build - Docker Image - echo
       shell: bash
       run: echo -e "🔔       D O C K E R      B U I L D"
@@ -205,6 +201,7 @@ runs:
         pkg-token: ${{ inputs.pkg-token }}
         staging: ${{ inputs.staging }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
+        module-path: ${{ inputs.terraform-module-path }}
 
 
 
@@ -284,9 +281,12 @@ runs:
       run: |
         echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
         echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
-        echo '| Name | Value |' >> $GITHUB_STEP_SUMMARY
-        echo '|:-|:-|' >> $GITHUB_STEP_SUMMARY
-        echo "| Docker image | <code>${{ env.DOCKER_IMAGE }}</code> |" >> $GITHUB_STEP_SUMMARY
+        echo '| Name         | Value                                 |' >> $GITHUB_STEP_SUMMARY
+        echo '|:-------------|:--------------------------------------|' >> $GITHUB_STEP_SUMMARY
+        echo "| Build Number | <code>${{ github.run_number }}</code> |" >> $GITHUB_STEP_SUMMARY
+        echo "| Build SHA    | <code>${{ github.sha }}</code>        |" >> $GITHUB_STEP_SUMMARY
+        echo "| Service Name | <code>${{ env.SERVICE_NAME }}</code>  |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Image | <code>${{ env.DOCKER_IMAGE }}</code>  |" >> $GITHUB_STEP_SUMMARY
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
