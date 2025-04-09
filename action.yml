@@ -297,7 +297,6 @@ runs:
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
       uses: spring-media/1up-github-actions@send-notifications
-      env:
 
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
