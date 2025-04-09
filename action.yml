@@ -20,10 +20,10 @@ inputs:
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
-  publish-libs-enabled:
-    description: 'Runs ./gradlew publish'
+  sonar-cmd:
+    description: 'Gradle command to run sonar analysis'
     required: false
-    default: 'false'
+    default: './gradlew --no-daemon --info sonar'
 
   aws-region:
     description: AWS region
@@ -64,6 +64,10 @@ inputs:
     description: 'Release to staging environment'
     required: false
     default: 'false'
+
+  success-message:
+    description: 'Slack message to send on success'
+    required: false
 
 runs:
   using: composite
@@ -294,3 +298,4 @@ runs:
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
         parent-job-status: ${{ github.action_status }}
+        success-message: ${{ inputs.success-message }}
