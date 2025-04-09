@@ -12,6 +12,9 @@ inputs:
   service-name:
     description: 'Explicit service name in case the repository does not represent a single service (monorepo)'
     required: false
+  success-prefix:
+    description: 'Prefix text to add in the Slack message sent on success'
+    required: false
   success-message:
     description: 'Slack message to send on success'
     required: false
@@ -56,12 +59,13 @@ runs:
     - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       env:
+        SUCCESS_PREFIX: '${{ inputs.success-prefix }}'
         SUCCESS_PARAM: '${{ inputs.success-message }}'
         FAILURE_PARAM: '${{ inputs.failure-message }}'
       run: |
         SUCCESS_FALLBACK='${{ env.GIT_ACTIONS_URL }} deployed successfully! ${{ env.GIT_PR_MSG }}'
         FAILURE_FALLBACK=':boom: ${{ env.GIT_ACTIONS_URL }} failed! ${{ env.GIT_PR_MSG }}'
-        SUCCESS_MESSAGE=${SUCCESS_PARAM:-$SUCCESS_FALLBACK}
+        SUCCESS_MESSAGE="${SUCCESS_PREFIX}${SUCCESS_PARAM:-$SUCCESS_FALLBACK}"
         FAILURE_MESSAGE=${FAILURE_PARAM:-$FAILURE_FALLBACK}
         echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
         echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
