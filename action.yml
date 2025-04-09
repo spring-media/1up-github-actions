@@ -65,10 +65,6 @@ inputs:
     required: false
     default: 'false'
 
-  success-message:
-    description: 'Slack message to send on success'
-    required: false
-
 runs:
   using: composite
   steps:
@@ -281,7 +277,6 @@ runs:
       env:
         JOB_STATUS_NAME: ${{ job.status }}
         ACTION_STATUS_NAME: ${{ github.action_status }}
-        REVISION : ${{ inputs.docker-image-tag }}
       run: |
         echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
         echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
@@ -292,10 +287,19 @@ runs:
         echo "| Service Name | <code>${{ env.SERVICE_NAME }}</code>  |" >> $GITHUB_STEP_SUMMARY
         echo "| Docker Image | <code>${{ env.DOCKER_IMAGE }}</code>  |" >> $GITHUB_STEP_SUMMARY
 
+
+    - name: Report - [on master] - message prefix
+      if: ${{ !cancelled() }} && github.ref == 'refs/heads/master' && inputs.service-name
+      shell: bash
+      run: |
+        echo "SUCCESS_PREFIX=${{ inputs.service-name }} / " >> $GITHUB_ENV    
+
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
       uses: spring-media/1up-github-actions@send-notifications
+      env:
+
       with:
         slack-webhook-url: ${{ inputs.up-slack-webhook-url }}
         parent-job-status: ${{ github.action_status }}
-        success-message: ${{ inputs.success-message }}
+        success-prefix: ${{ env.SUCCESS_PREFIX }}
