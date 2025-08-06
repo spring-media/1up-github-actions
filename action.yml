@@ -191,7 +191,7 @@ runs:
       with:
         filters: |
           terraform:
-            - 'terraform/**'
+            - "${{ inputs.terraform-module-path }}/**"
 
     - name: Release - terraform
       if: steps.infrastructure-changes.outputs.terraform == 'true'
