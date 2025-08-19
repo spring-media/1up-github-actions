@@ -47,6 +47,7 @@ inputs:
   service-name:
     description: 'Custom name for the ECS service which can be used for mono repos'
     required: false
+    default: ''
   docker-image-tag:
     description: 'Docker image build tag used when pushing to the 1up AWS ECR'
     required: false
@@ -292,7 +293,8 @@ runs:
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master' && inputs.service-name
       shell: bash
       run: |
-        echo "SUCCESS_PREFIX=${{ inputs.service-name }} / " >> $GITHUB_ENV    
+        [[ "${{ inputs.service-name }}" = "" ]] && prefix="" || prefix="${{ inputs.service-name }} / "
+        echo "SUCCESS_PREFIX=$prefix" >> $GITHUB_ENV    
 
     - name: Report - [on master]
       if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
