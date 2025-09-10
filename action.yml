@@ -101,7 +101,7 @@ runs:
 
     - name: Release - on staging
       if: ${{ inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false' }}
-      uses: silinternational/ecs-deploy@master
+      uses: sil-org/ecs-deploy@master
       with:
         aws_access_key_cmd: --aws-access-key
         aws_access_key: ${{ inputs.up-aws-access-key-id }}
@@ -120,7 +120,7 @@ runs:
 
     - name: Release - [on master]
       if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
-      uses: silinternational/ecs-deploy@master
+      uses: sil-org/ecs-deploy@master
       with:
         aws_access_key_cmd: '--aws-access-key'
         aws_access_key: ${{ inputs.up-aws-access-key-id }}
