@@ -3,6 +3,10 @@ author: '1up-team'
 description: 'Action to build and release Java & Gradle repositories'
 
 inputs:
+  checkout-enabled:
+    description: 'Enable git checkout of repo as part of this job'
+    required: true
+    default: 'true'
   java-version:
     description: 'Version number used for actions/setup-java'
     required: false
@@ -76,6 +80,7 @@ runs:
     - name: Setup - Validate Inputs
       shell: bash
       run: |
+        [[ "${{ inputs.checkout-enabled }}" ]] || { echo "input 'checkout-enabled' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-access-key-id }}" ]] || { echo "input 'up-aws-access-key-id' cannot be blank"; exit 1; }
         [[ "${{ inputs.up-aws-secret-access-key }}" ]] || { echo "input 'up-aws-secret-access-key' cannot be blank"; exit 1; }
@@ -83,6 +88,7 @@ runs:
         [[ "${{ inputs.up-slack-webhook-url }}" ]] || { echo "input 'up-slack-webhook-url' cannot be blank"; exit 1; }
 
     - name: ︎Setup - Checkout
+      if: inputs.checkout-enabled
       uses: actions/checkout@v4
       with:
         show-progress: false
