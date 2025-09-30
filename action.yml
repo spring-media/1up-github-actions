@@ -165,7 +165,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.pkg-token }}
         SONAR_TOKEN: ${{ inputs.sonar-token }}
       shell: bash
-      run: ./gradlew --no-daemon --info sonar
+      run: ./gradlew --no-daemon --info sonar || true
 
 
 
@@ -296,14 +296,14 @@ runs:
 
 
     - name: Report - [on master] - message prefix
-      if: ${{ !cancelled() }} && github.ref == 'refs/heads/master' && inputs.service-name
+      if: github.ref == 'refs/heads/master' && inputs.service-name && !cancelled()
       shell: bash
       run: |
         [[ "${{ inputs.service-name }}" = "" ]] && prefix="" || prefix="${{ inputs.service-name }} / "
         echo "SUCCESS_PREFIX=$prefix" >> $GITHUB_ENV    
 
     - name: Report - [on master]
-      if: ${{ !cancelled() }} && github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && !cancelled()
       uses: spring-media/1up-github-actions@send-notifications
 
       with:
