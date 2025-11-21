@@ -89,13 +89,13 @@ runs:
 
     - name: ︎Setup - Checkout
       if: inputs.checkout-enabled
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         show-progress: false
         fetch-depth: 0
 
     - name: ︎Setup - Java
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: ${{ inputs.java-version }}
         distribution: corretto
@@ -118,7 +118,7 @@ runs:
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v5
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
