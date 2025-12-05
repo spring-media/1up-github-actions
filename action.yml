@@ -55,7 +55,8 @@ runs:
       shell: bash
       run: |
         git config --local --remove-section http."https://github.com/" || true
-        git config --global url."ssh://git@github.com/spring-media/1up-infrastructure-ecs.git".insteadOf "https://1up-infrastructure-ecs"
+        git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
+        git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media/1up-infrastructure-ecs.git".insteadOf "https://1up-infrastructure-ecs"
 
 
 
