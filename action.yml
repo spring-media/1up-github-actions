@@ -21,6 +21,10 @@ inputs:
     description: 'Gradle wrapper run command'
     required: false
     default: './gradlew --no-daemon --info build'
+  publish-libs-enabled:
+    description: 'Runs the Gradle publish task when true'
+    required: false
+    default: 'false'
   sonar-token:
     description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
     required: false
