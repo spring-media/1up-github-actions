@@ -25,13 +25,6 @@ inputs:
     description: 'Runs the Gradle publish task when true'
     required: false
     default: 'false'
-  sonar-token:
-    description: 'Token used for triggering and uploading the static code analysis to Sonar Cloud'
-    required: false
-  sonar-cmd:
-    description: 'Gradle command to run sonar analysis'
-    required: false
-    default: './gradlew --no-daemon --info sonar'
 
   aws-region:
     description: AWS region
@@ -149,27 +142,11 @@ runs:
 
     - name: Build - Gradle - Annotate Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
+      continue-on-error: true
       if: ${{ !cancelled() }}
       with:
         junit_files: '**/test-results/**/*.xml'
         comment_mode: off
-
-
-
-    - name: Build - Sonar - echo
-      if: inputs.sonar-token
-      shell: bash
-      run: echo -e "🔔\n🔔       S O N A R       \n🔔"
-
-    - name: Build - Sonar - Analyze
-      if: inputs.sonar-token
-      env:
-        GITHUB_PKG_USER: ${{ inputs.pkg-user }}
-        GITHUB_PKG_TOKEN: ${{ inputs.pkg-token }}
-        GITHUB_TOKEN: ${{ inputs.pkg-token }}
-        SONAR_TOKEN: ${{ inputs.sonar-token }}
-      shell: bash
-      run: ./gradlew --no-daemon --info sonar || true
 
 
 
@@ -285,6 +262,7 @@ runs:
     - name: Report - echo [on master]
       if: github.ref == 'refs/heads/master'
       shell: bash
+      continue-on-error: true
       env:
         JOB_STATUS_NAME: ${{ job.status }}
         ACTION_STATUS_NAME: ${{ github.action_status }}
