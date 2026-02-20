@@ -22,7 +22,7 @@ inputs:
     default: 'false'
 
   node-version:
-    description: Version of node js to run
+    description: 'Version number used for actions/setup-node'
     required: false
     default: '16'
 
@@ -49,12 +49,18 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup - Validate Inputs
       shell: bash
       run: |
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+
+    - name: ︎Setup - Node js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
 
     - name: Setup service name
       run: |
