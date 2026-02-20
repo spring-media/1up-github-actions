@@ -57,10 +57,10 @@ runs:
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
 
     - name: ︎Setup - Node js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
-        cache: npm
+        check-latest: true
 
     - name: Setup service name
       run: |
