@@ -39,7 +39,7 @@ runs:
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
 
-    - uses: dorny/paths-filter@v3
+    - uses: dorny/paths-filter@v4
       id: infrastructure-changes
       with:
         filters: |
@@ -48,7 +48,9 @@ runs:
 
     - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.found == 'true'
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: "1.14.9"
 
     - name: Setup - terraform - git
       if: steps.infrastructure-changes.outputs.found == 'true'
@@ -120,7 +122,7 @@ runs:
       if: |
         steps.infrastructure-changes.outputs.found == 'true' 
         && github.ref != 'refs/heads/master'
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
         PLAN: ${{ steps.terraform-plan.outputs.stdout }}
