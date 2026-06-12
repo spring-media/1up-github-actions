@@ -36,10 +36,6 @@ inputs:
   up-aws-secret-access-key:
     description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
     required: true
-  aws-staging-cluster:
-    description: 'Staging ECS cluster name for the configured AWS region'
-    required: false
-    default: 'up-cluster-staging'
   aws-production-cluster:
     description: 'Production ECS cluster name for the configured AWS region'
     required: false
@@ -62,10 +58,6 @@ inputs:
     description: 'Dir path from where to plan or apply the Terraform config'
     required: false
     default: 'terraform'
-  staging:
-    description: 'Release to staging environment'
-    required: false
-    default: 'false'
 
 runs:
   using: composite
@@ -86,13 +78,13 @@ runs:
 
     - name: ︎Setup - Checkout
       if: inputs.checkout-enabled
-      uses: actions/checkout@v6
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #https://github.com/actions/checkout/releases/tag/v6.0.3
       with:
         show-progress: false
         fetch-depth: 0
 
     - name: ︎Setup - Java
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  #https://github.com/actions/setup-java/releases/tag/v5.2.0
       with:
         java-version: ${{ inputs.java-version }}
         distribution: corretto
@@ -115,14 +107,14 @@ runs:
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
 
     - name: ︎Setup - AWS Credentials [on master]
-      uses: aws-actions/configure-aws-credentials@v5
+      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b  #https://github.com/aws-actions/configure-aws-credentials/releases/tag/v6.2.0
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
 
     - name: ECR setup
-      uses: aws-actions/amazon-ecr-login@v2
+      uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419  #https://github.com/aws-actions/amazon-ecr-login/releases/tag/v2.1.5
       id: ecr-login
 
 
@@ -141,7 +133,7 @@ runs:
         ${{ inputs.gradle-cmd }}
 
     - name: Build - Gradle - Annotate Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+      uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040  #https://github.com/EnricoMi/publish-unit-test-result-action/releases/tag/v2.23.0
       continue-on-error: true
       if: ${{ !cancelled() }}
       with:
@@ -164,7 +156,7 @@ runs:
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
 
     - name: Release - push Docker image [on master]
-      if: inputs.staging == 'true' || github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master'
       shell: bash
       run: docker push ${{ env.DOCKER_IMAGE }}
 
@@ -174,7 +166,7 @@ runs:
       shell: bash
       run: echo -e "🔔       T E R R A F O R M"
 
-    - uses: dorny/paths-filter@v3
+    - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
       with:
         filters: |
@@ -187,37 +179,11 @@ runs:
       with:
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
-        staging: ${{ inputs.staging }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
         module-path: ${{ inputs.terraform-module-path }}
 
 
 
-    - name: Release - on staging - echo
-      if: inputs.staging == 'true'
-      shell: bash
-      run: echo -e "🔔       R E L E A S E      S T A G I N G"
-
-    - name: Release - on staging
-      if: inputs.staging == 'true' && steps.infrastructure-changes.outputs.terraform == 'false'
-      uses: sil-org/ecs-deploy@master
-      with:
-        aws_access_key_cmd: --aws-access-key
-        aws_access_key: ${{ inputs.up-aws-access-key-id }}
-        aws_secret_key_cmd: --aws-secret-key
-        aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
-        cluster_cmd: --cluster
-        cluster: ${{ inputs.aws-staging-cluster }}
-        image_cmd: --image
-        image: ${{ env.DOCKER_IMAGE }}
-        region_cmd: --region
-        region: ${{ inputs.aws-region }}
-        service_name_cmd: --service-name
-        service_name: ${{ env.SERVICE_NAME }}
-        timeout_cmd: --timeout
-        timeout: 600
-
-    
     - name: Release - publish libraries [on master]
       if: github.ref == 'refs/heads/master' && inputs.publish-libs-enabled == 'true'
       shell: bash
@@ -240,7 +206,7 @@ runs:
 
     - name: Release - on production [on master]
       if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
-      uses: sil-org/ecs-deploy@master
+      uses: sil-org/ecs-deploy@1d31607c5a207893b64d0c6a81dcdbd0c5eab382  #https://github.com/sil-org/ecs-deploy/releases/tag/3.10.23
       with:
         aws_access_key_cmd: --aws-access-key
         aws_access_key: ${{ inputs.up-aws-access-key-id }}
