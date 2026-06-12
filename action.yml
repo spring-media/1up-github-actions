@@ -62,14 +62,14 @@ runs:
       if: inputs.parent-job-status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
-        curl -X POST \
+        curl --no-progress-meter -X POST \
              --header 'ContentType: application/json' \
              --data '{
                 "attachments": [{
                   "color": "#157979",
                   "blocks": [{
                     "type": "section",
-                    "text": { "type": "mrkdwn", "text": "${{ toJSON(env.SUCCESS_MESSAGE) }}" }
+                    "text": { "type": "mrkdwn", "text": ${{ toJSON(env.SUCCESS_MESSAGE) }} }
                   }]
                 }]
              }' \
@@ -79,14 +79,14 @@ runs:
       if: inputs.parent-job-status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
-        curl -X POST \
+        curl --no-progress-meter -X POST \
              --header 'ContentType: application/json' \
              --data '{
                 "attachments": [{
                   "color": "#C75605",
                   "blocks": [{
                     "type": "section",
-                    "text": { "type": "mrkdwn", "text": "${{ toJSON(env.FAILURE_MESSAGE) }}" }
+                    "text": { "type": "mrkdwn", "text": ${{ toJSON(env.FAILURE_MESSAGE) }} }
                   }]
                 }]
              }' \
