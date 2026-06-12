@@ -11,6 +11,7 @@ inputs:
     required: true
   service-name:
     description: 'Explicit service name in case the repository does not represent a single service (monorepo)'
+    default: ''
     required: false
   success-prefix:
     description: 'Prefix text to add in the Slack message sent on success'
@@ -35,79 +36,58 @@ runs:
         [[ "${{ inputs.slack-webhook-url }}" ]] || { echo "input 'slack-webhook-url' cannot be blank"; exit 1; }
         [[ "${{ inputs.parent-job-status }}" ]] || { echo "input 'parent-job-status' cannot be blank"; exit 1; }
 
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+    - name: Setup - GitHub Message Env Vars
+      if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
       shell: bash
       run: |
-        GIT_SHORT_REPO_NAME=${GITHUB_REPOSITORY##*/}
-        GIT_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
-        GIT_PR=$(echo $GIT_COMMIT_MSG | sed -r 's/.*#([0-9]+).*/\1/')
-        GIT_PR_URL="https://github.com/${{ github.repository }}/pull/$GIT_PR"
-        [[ "$GIT_PR" =~ ^[0-9]+$ ]] && GIT_PR_MSG="<$GIT_PR_URL|$GIT_COMMIT_MSG>" || GIT_PR_MSG="$GIT_COMMIT_MSG"
-        echo "GIT_SHORT_REPO_NAME=$GIT_SHORT_REPO_NAME" >> $GITHUB_ENV
-        echo "GIT_PR_MSG=$GIT_PR_MSG" >> $GITHUB_ENV
-
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && inputs.service-name == null
-      shell: bash
-      run: |
-        echo "GIT_ACTIONS_URL=<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|$GIT_SHORT_REPO_NAME>" >> $GITHUB_ENV
-
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true') && inputs.service-name != null
-      shell: bash
-      run: |
-        echo "GIT_ACTIONS_URL=<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|$GIT_SHORT_REPO_NAME / ${{ inputs.service-name }}>" >> $GITHUB_ENV
-
-    - if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
-      shell: bash
-      env:
-        SUCCESS_PREFIX: '${{ inputs.success-prefix }}'
-        SUCCESS_PARAM: '${{ inputs.success-message }}'
-        FAILURE_PARAM: '${{ inputs.failure-message }}'
-      run: |
-        SUCCESS_FALLBACK='${{ env.GIT_ACTIONS_URL }} deployed successfully! ${{ env.GIT_PR_MSG }}'
-        FAILURE_FALLBACK=':boom: ${{ env.GIT_ACTIONS_URL }} failed! ${{ env.GIT_PR_MSG }}'
-        SUCCESS_MESSAGE="${SUCCESS_PREFIX}${SUCCESS_PARAM:-$SUCCESS_FALLBACK}"
-        FAILURE_MESSAGE=${FAILURE_PARAM:-$FAILURE_FALLBACK}
-        echo "SUCCESS_MESSAGE=$SUCCESS_MESSAGE" >> $GITHUB_ENV
-        echo "FAILURE_MESSAGE=$FAILURE_MESSAGE" >> $GITHUB_ENV
+        [[ "${{ inputs.service-name }}" == "" ]] \
+            && service_suffix="" \
+            || service_suffix=" / ${{ inputs.service-name }}"
+        service_name="${GITHUB_REPOSITORY##*/}$service_suffix"
+        commit_msg=$(git log -1 --pretty=format:'%s')
+        gh_pr_num=$(echo $commit_msg | sed -r 's/.*#([0-9]+).*/\1/')
+        gh_url="https://github.com/${GITHUB_REPOSITORY}"
+        gha_url="<$gh_url/actions/runs/$GITHUB_RUN_ID|$service_name>"
+        [[ "$gh_pr" =~ ^[0-9]+$ ]] \
+            && git_pr_msg="<$gh_url/pull/$gh_pr_num|$commit_msg>" \
+            || git_pr_msg="$git_commit_msg"
+        success_fallback="$gha_url deployed successfully! $gh_pr_msg"
+        success_msg="${{ inputs.success-message }}"
+        echo "SUCCESS_MESSAGE=${{ inputs.success-prefix }} ${success_msg:-$success_fallback}" >> $GITHUB_ENV
+        failure_fallback=":boom: $gha_url failed! $gh_pr_msg"
+        failure_msg="${{ inputs.failure-message }}"
+        echo "FAILURE_MESSAGE=${failure_msg:-$failure_fallback}" >> $GITHUB_ENV
 
     - name: Report - success [on master]
-      if:  inputs.parent-job-status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
-      uses: slackapi/slack-github-action@v1
-      env:
-        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
-      with:
-        payload: |
-          {
-            "attachments": [{
-              "color": "#2eb886",
-              "blocks": [{
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ${{ toJSON(env.SUCCESS_MESSAGE) }}
-                }
-              }]
-            }]
-          }
+      if: inputs.parent-job-status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      shell: bash
+      run: |
+        curl -X POST \
+             --header 'ContentType: application/json' \
+             --data '{
+                "attachments": [{
+                  "color": "#157979",
+                  "blocks": [{
+                    "type": "section",
+                    "text": { "type": "mrkdwn", "text": "${{ toJSON(env.SUCCESS_MESSAGE) }}" }
+                  }]
+                }]
+             }' \
+            '${{ inputs.slack-webhook-url }}'
 
     - name: Report - failure [on master]
       if: inputs.parent-job-status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
-      uses: slackapi/slack-github-action@v1
-      env:
-        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
-      with:
-        payload: |
-          {
-            "attachments": [{
-              "color": "#ed2f00",
-              "blocks": [{
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ${{ toJSON(env.FAILURE_MESSAGE) }}
-                }
-              }]
-            }]
-          }
+      shell: bash
+      run: |
+        curl -X POST \
+             --header 'ContentType: application/json' \
+             --data '{
+                "attachments": [{
+                  "color": "#C75605",
+                  "blocks": [{
+                    "type": "section",
+                    "text": { "type": "mrkdwn", "text": "${{ toJSON(env.FAILURE_MESSAGE) }}" }
+                  }]
+                }]
+             }' \
+            '${{ inputs.slack-webhook-url }}'
