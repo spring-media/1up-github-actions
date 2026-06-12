@@ -20,11 +20,6 @@ inputs:
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
 
-  staging:
-    description: 'Release to staging environment'
-    required: false
-    default: 'false'
-
 outputs:
   infrastructure-changes:
     description: 'Flag indicating found changes in the terraform stack dir, passed as "module-path"'
@@ -39,7 +34,7 @@ runs:
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
 
-    - uses: dorny/paths-filter@v4
+    - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
       with:
         filters: |
@@ -48,7 +43,7 @@ runs:
 
     - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.found == 'true'
-      uses: hashicorp/setup-terraform@v4
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  #https://github.com/hashicorp/setup-terraform/releases/tag/v4.0.1
       with:
         terraform_version: "1.14.9"
 
@@ -59,27 +54,6 @@ runs:
         git config --local --remove-section http."https://github.com/" || true
         git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
         git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media/1up-infrastructure-ecs.git".insteadOf "https://1up-infrastructure-ecs"
-
-
-
-    - name: Release - on staging - echo
-      if: |
-        steps.infrastructure-changes.outputs.found == 'true' 
-        && inputs.staging == 'true'
-      shell: bash
-      run: |
-        echo -e "🔔\n🔔       R E L E A S E      S T A G I N G       \n🔔"
-
-    - name: Release - on staging - terraform validate and apply
-      if: |
-        steps.infrastructure-changes.outputs.found == 'true' 
-        && inputs.staging == 'true'
-      working-directory: ${{ inputs.module-path }}
-      shell: bash
-      run: |
-        terraform init -backend-config="key=staging/ecs_service_${{ inputs.service-name }}/terraform.tfstate"
-        terraform validate
-        terraform apply -var 'environment=staging' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
 
 
 
@@ -113,7 +87,7 @@ runs:
       if: |
         steps.infrastructure-changes.outputs.found == 'true' 
         && github.ref != 'refs/heads/master'
-      uses: jwalton/gh-find-current-pr@v1
+      uses: jwalton/gh-find-current-pr@f3d61b485d2801773f7a07b2aaa3306bd8f8e653  #https://github.com/jwalton/gh-find-current-pr/releases/tag/v1.3.5
       id: find-pr
       with:
         state: open
@@ -122,7 +96,7 @@ runs:
       if: |
         steps.infrastructure-changes.outputs.found == 'true' 
         && github.ref != 'refs/heads/master'
-      uses: actions/github-script@v9
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  #https://github.com/actions/github-script/releases/tag/v9.0.0
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
         PLAN: ${{ steps.terraform-plan.outputs.stdout }}
