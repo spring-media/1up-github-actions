@@ -16,6 +16,16 @@ inputs:
     required: false
     default: '933782373565.dkr.ecr.eu-west-1.amazonaws.com'
 
+  aws-region:
+    description: 'Aws region used to deploy the infrastructure and push the docker image'
+    required: false
+    default: 'eu-west-1'
+
+  cluster-name:
+    description: 'Aws cluster name used to deploy the infrastructure'
+    required: false
+    default: 'up-cluster-production'
+
   staging:
     description: 'Release to staging environment'
     required: false
@@ -74,7 +84,7 @@ runs:
       with:
         aws-access-key-id: ${{ inputs.up-aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.up-aws-secret-access-key }}
-        aws-region: eu-west-1
+        aws-region: ${{ inputs.aws-region }}
 
     - name: ECR setup
       uses: aws-actions/amazon-ecr-login@v2
@@ -123,7 +133,7 @@ runs:
         image_cmd: --image
         image: ${{ env.DOCKER_IMAGE }}
         region_cmd: --region
-        region: eu-west-1
+        region: ${{ inputs.aws-region }}
         service_name_cmd: --service-name
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: --timeout
@@ -139,11 +149,11 @@ runs:
         aws_secret_key_cmd: '--aws-secret-key'
         aws_secret_key: ${{ inputs.up-aws-secret-access-key }}
         cluster_cmd: '--cluster'
-        cluster: 'up-cluster-production'
+        cluster: ${{ inputs.cluster-name }}
         image_cmd: '--image'
         image: ${{ env.DOCKER_IMAGE }}
         region_cmd: '--region'
-        region: 'eu-west-1'
+        region: ${{ inputs.aws-region }}
         service_name_cmd: '--service-name'
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: '--timeout'
