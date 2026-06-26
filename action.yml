@@ -9,10 +9,10 @@ inputs:
   module-path:
     description: 'Relative dir path that contains the Terraform files (no end "/")'
     required: false
+    default: 'terraform'
   paths:
     description: 'Space-delimited relative dir paths that contain Terraform-related files (no end "/")'
     required: false
-    default: 'terraform'
 
   pkg-token:
     description: 'spring-media GitHub packages token. Used for calling the GitHub API and by Terraform for cloning 1up-infrastructure modules'
@@ -42,7 +42,7 @@ runs:
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         paths_json="[ \"${{ inputs.module-path }}/**\" ]"
-        if [[ "${{ inputs.module-path }}" == "" ]]; then
+        if [[ "${{ inputs.paths }}" != "" ]]; then
           paths=(${{ inputs.paths }})
           filter_paths=""
           for ((i = 0; i < ${#paths[@]}; i++)); do
