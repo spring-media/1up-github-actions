@@ -12,7 +12,7 @@ inputs:
   paths:
     description: 'Relative paths to the Terraform-related dirs'
     required: false
-    default: '["terraform"]'
+    default: 'terraform'
 
   pkg-token:
     description: 'spring-media GitHub packages token. Used for calling the GitHub API and by Terraform for cloning 1up-infrastructure modules'
