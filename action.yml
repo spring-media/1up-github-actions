@@ -58,7 +58,8 @@ runs:
       id: infrastructure-changes
       with:
         filters: |
-          found: ${{ fromJSON(env.PATHS_JSON) }}
+          found: 
+            - ${{ fromJSON(env.PATHS_JSON) }}
 
     - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true'
