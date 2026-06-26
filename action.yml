@@ -7,7 +7,10 @@ inputs:
     description: 'Used to derive Terraform state file on backend: ecs_service_{service-name}'
     required: true
   module-path:
-    description: 'Relative path to the Terraform stack dir'
+    description: 'Relative dir path that contains the Terraform files (no end "/")'
+    required: false
+  paths:
+    description: 'Space-delimited relative dir paths that contain Terraform-related files (no end "/")'
     required: false
     default: 'terraform'
 
@@ -27,7 +30,7 @@ inputs:
 
 outputs:
   infrastructure-changes:
-    description: 'Flag indicating found changes in the terraform stack dir, passed as "module-path"'
+    description: 'Flag indicating found changes in the terraform stack dir/s'
     value: ${{ steps.infrastructure-changes.outputs.found }}
 
 runs:
@@ -38,13 +41,24 @@ runs:
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+        paths_json="[ \"${{ inputs.module-path }}/**\" ]"
+        if [[ "${{ inputs.module-path }}" == "" ]]; then
+          paths=(${{ inputs.paths }})
+          filter_paths=""
+          for ((i = 0; i < ${#paths[@]}; i++)); do
+            filter_paths+="'${paths[$i]}/**',"
+          done
+          length=${#filter_paths}
+          paths_json="[ ${filter_paths:0: length - 1} ]"
+        fi
+        echo "paths_json = $paths_json"
+        echo "PATHS_JSON=$paths_json" >> $GITHUB_ENV
 
     - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
       with:
         filters: |
-          found:
-            - '${{ inputs.module-path }}/**'
+          found: ${{ env.PATHS_JSON }}
 
     - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true'
