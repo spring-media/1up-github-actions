@@ -10,7 +10,7 @@ inputs:
     description: 'Relative path to the Terraform stack dir'
     required: false
   paths:
-    description: 'Relative paths to the Terraform-related dirs'
+    description: 'Space-delimited relative paths that contain Terraform-related files'
     required: false
     default: 'terraform'
 
@@ -46,7 +46,7 @@ runs:
           paths=(${{ inputs.paths }})
           filter_paths=""
           for ((i = 0; i < ${#paths[@]}; i++)); do
-            filter_paths+="\"${paths[$i]}/**\","
+            filter_paths+="'${paths[$i]}/**',"
           done
           length=${#filter_paths}
           paths_json="[ ${filter_paths:0: length - 1} ]"
