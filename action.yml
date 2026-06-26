@@ -9,7 +9,10 @@ inputs:
   module-path:
     description: 'Relative path to the Terraform stack dir'
     required: false
-    default: 'terraform'
+  paths:
+    description: 'Relative paths to the Terraform-related dirs'
+    required: false
+    default: '["terraform"]'
 
   pkg-token:
     description: 'spring-media GitHub packages token. Used for calling the GitHub API and by Terraform for cloning 1up-infrastructure modules'
@@ -38,13 +41,24 @@ runs:
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
         [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
+        paths_json="[ \"${{ inputs.module-path }}/**\" ]"
+        if [[ "${{ inputs.module-path }}" == "" ]]; then
+          paths=(${{ inputs.paths }})
+          filter_paths=""
+          for ((i = 0; i < ${#paths[@]}; i++)); do
+            filter_paths+="\"${paths[$i]}/**\","
+          done
+          length=${#filter_paths}
+          paths_json="[ ${filter_paths:0: length - 1} ]"
+        fi
+        echo "paths_json = $paths_json"
+        echo "PATHS_JSON=$paths_json" >> $GITHUB_ENV
 
     - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
       with:
         filters: |
-          found:
-            - '${{ inputs.module-path }}/**'
+          found: ${{ fromJSON(env.PATHS_JSON) }}
 
     - name: Setup - terraform
       if: steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true'
