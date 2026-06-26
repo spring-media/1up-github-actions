@@ -16,4 +16,4 @@ jobs:
         uses: spring-media/1up-github-actions@deploy-infra-multiple-test
         with:
          service-name: '...'
-         pkg-tokens: '...'
+         pkg-token: '...'
