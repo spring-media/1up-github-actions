@@ -13,14 +13,19 @@ inputs:
     default: 'b${{ github.run_number }}-${{ github.sha }}'
 
   aws-region:
-    description: 'Aws region used to deploy the infrastructure and push the docker image'
+    description: 'AWS region used to deploy the infrastructure and push the docker image'
     required: false
     default: 'eu-west-1'
 
   cluster-name:
-    description: 'Aws cluster name used to deploy the infrastructure'
+    description: 'AWS cluster name used to deploy the infrastructure'
     required: false
     default: 'up-cluster-production'
+
+  service-name:
+    required: false
+    description: 'Custom AWS service name to use instead of deriving it from the repo name'
+    default: ''
 
   up-slack-webhook-url:
     description: 'Slack channel webhook URL used when reporting master build status'
@@ -54,7 +59,8 @@ runs:
 
     - name: Setup service name
       run: |
-        SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
+        SERVICE_NAME=${{ inputs.service-name }}
+        [[ "${SERVICE_NAME}" ]] || SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
         echo "Service name: $SERVICE_NAME"
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
       shell: bash
