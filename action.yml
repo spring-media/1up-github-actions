@@ -1,0 +1,137 @@
+name: 'claude-code-review'
+author: '1up-team'
+description: 'Automatically review pull requests with Claude Code and post inline feedback'
+
+inputs:
+  anthropic-api-key:
+    description: 'Anthropic API key used to authenticate the Claude Code review'
+    required: true
+  github-token:
+    description: 'GitHub token used to read the PR and post review comments'
+    required: false
+    default: ${{ github.token }}
+  checkout-enabled:
+    description: 'Enable git checkout of the repo as part of this job'
+    required: false
+    default: 'true'
+  on-demand:
+    description: 'Run in tag mode: only respond when the trigger phrase (e.g. @claude) is used in a PR comment, instead of auto-reviewing'
+    required: false
+    default: 'false'
+  trigger-phrase:
+    description: 'Phrase that triggers Claude in on-demand (tag) mode'
+    required: false
+    default: '@claude'
+  model:
+    description: 'Claude model to use for the review (passed to Claude CLI via --model)'
+    required: false
+    default: 'claude-sonnet-4-5'
+  max-turns:
+    description: 'Cap on Claude agent turns per review. Main cost guardrail against runaway loops'
+    required: false
+    default: '15'
+  track-progress:
+    description: 'Post a tracking comment that updates with review progress'
+    required: false
+    default: 'true'
+  review-prompt:
+    description: 'Custom review prompt. When empty a sensible default review prompt is used'
+    required: false
+    default: ''
+  claude-args:
+    description: 'Additional CLI args forwarded to Claude Code (e.g. --allowedTools ...)'
+    required: false
+    default: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"'
+
+runs:
+  using: composite
+  steps:
+    - name: Review - echo
+      shell: bash
+      run: echo -e "🔔\n🔔\n🔔       C L A U D E   C O D E   R E V I E W       \n🔔\n🔔"
+
+    - name: Review - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.anthropic-api-key }}" ]] || { echo "input 'anthropic-api-key' cannot be blank"; exit 1; }
+
+    - name: Review - Checkout
+      if: inputs.checkout-enabled == 'true' && inputs.on-demand != 'true'
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #https://github.com/actions/checkout/releases/tag/v6.0.3
+      with:
+        show-progress: false
+        fetch-depth: 1
+
+    - name: Review - Build prompt
+      id: prompt
+      if: inputs.on-demand != 'true'
+      shell: bash
+      env:
+        CUSTOM_PROMPT: ${{ inputs.review-prompt }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        {
+          echo 'value<<CLAUDE_PROMPT_EOF'
+          if [[ -n "$CUSTOM_PROMPT" ]]; then
+            printf '%s\n' "$CUSTOM_PROMPT"
+          else
+            cat <<EOF
+        REPO: ${REPO}
+        PR NUMBER: ${PR_NUMBER}
+
+        Please review this pull request with a focus on:
+        - Code quality and best practices
+        - Potential bugs or logic errors
+        - Security implications
+        - Performance considerations
+
+        Note: The PR branch is already checked out in the current working directory.
+
+        Use \`gh pr comment\` for top-level feedback.
+        Use \`mcp__github_inline_comment__create_inline_comment\` (with \`confirmed: true\`) to highlight specific code issues.
+        Only post GitHub comments - don't submit review text as messages.
+        EOF
+          fi
+          echo 'CLAUDE_PROMPT_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Review - Build claude args
+      id: args
+      shell: bash
+      env:
+        BASE_ARGS: ${{ inputs.claude-args }}
+        MODEL: ${{ inputs.model }}
+        MAX_TURNS: ${{ inputs.max-turns }}
+      run: |
+        ARGS="$BASE_ARGS"
+        if [[ -n "$MODEL" ]]; then
+          ARGS="$ARGS --model $MODEL"
+        fi
+        if [[ -n "$MAX_TURNS" ]]; then
+          ARGS="$ARGS --max-turns $MAX_TURNS"
+        fi
+        {
+          echo 'value<<CLAUDE_ARGS_EOF'
+          printf '%s\n' "$ARGS"
+          echo 'CLAUDE_ARGS_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Review - Claude Code [automation]
+      if: inputs.on-demand != 'true'
+      uses: anthropics/claude-code-action@d40ddef4c030e508327d6e35a9c45f3368482c50  #https://github.com/anthropics/claude-code-action/releases/tag/v1
+      with:
+        anthropic_api_key: ${{ inputs.anthropic-api-key }}
+        github_token: ${{ inputs.github-token }}
+        track_progress: ${{ inputs.track-progress }}
+        prompt: ${{ steps.prompt.outputs.value }}
+        claude_args: ${{ steps.args.outputs.value }}
+
+    - name: Review - Claude Code [on-demand]
+      if: inputs.on-demand == 'true'
+      uses: anthropics/claude-code-action@d40ddef4c030e508327d6e35a9c45f3368482c50  #https://github.com/anthropics/claude-code-action/releases/tag/v1
+      with:
+        anthropic_api_key: ${{ inputs.anthropic-api-key }}
+        github_token: ${{ inputs.github-token }}
+        trigger_phrase: ${{ inputs.trigger-phrase }}
+        claude_args: ${{ steps.args.outputs.value }}
