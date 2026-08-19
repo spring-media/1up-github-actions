@@ -1,0 +1,290 @@
+name: build-ecs-gradle
+
+on:
+  workflow_call:
+    inputs:
+      checkout-enabled:
+        description: 'Enable git checkout of repo as part of this job'
+        type: boolean
+        required: false
+        default: true
+      java-version:
+        description: 'Version number used for actions/setup-java'
+        type: string
+        required: false
+        default: '17'
+      pkg-user:
+        description: 'User name used to integrate with the spring-media GitHub packages for internal libs'
+        type: string
+        required: false
+      gradle-cmd:
+        description: 'Gradle wrapper run command'
+        type: string
+        required: false
+        default: './gradlew --no-daemon --info build'
+      publish-libs-enabled:
+        description: 'Runs the Gradle publish task when true'
+        type: boolean
+        required: false
+        default: false
+      aws-region:
+        description: 'AWS region'
+        type: string
+        required: false
+        default: 'eu-west-1'
+      aws-production-cluster:
+        description: 'Production ECS cluster name for the configured AWS region'
+        type: string
+        required: false
+        default: 'up-cluster-production'
+      service-name:
+        description: 'Custom name for the ECS service which can be used for mono repos'
+        type: string
+        required: false
+        default: ''
+      docker-image-tag:
+        description: 'Docker image build tag used when pushing to the 1up AWS ECR'
+        type: string
+        required: false
+        default: 'b${{ github.run_number }}-${{ github.sha }}'
+      terraform-module-path:
+        description: 'Dir path from where to plan or apply the Terraform config'
+        type: string
+        required: false
+        default: 'terraform'
+      claude-pr-review:
+        description: 'Opt in to running the Spring Media reusable Claude pull request review workflow. Only runs on pull_request events, regardless of this flag.'
+        type: boolean
+        required: false
+        default: false
+      node_version:
+        description: 'Node version used by the Claude pull request review workflow'
+        type: string
+        required: false
+        default: '20.19.0'
+    secrets:
+      pkg-token:
+        description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
+        required: true
+      up-aws-access-key-id:
+        description: 'AWS access key id secret used to integrate with aws-cli or docker repository'
+        required: true
+      up-aws-secret-access-key:
+        description: 'AWS access secret key secret used to integrate with aws-cli or docker repository'
+        required: true
+      up-slack-webhook-url:
+        description: 'Slack channel webhook URL used when reporting master build status'
+        required: true
+      ANTHROPIC_API_KEY:
+        description: 'Anthropic API key, required only when claude-pr-review is enabled'
+        required: false
+      NPM_AUTH_TOKEN:
+        description: 'NPM auth token, required only when claude-pr-review is enabled'
+        required: false
+      GITHUB_PKG_TOKEN:
+        description: 'GitHub packages token, required only when claude-pr-review is enabled'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup - echo
+        shell: bash
+        run: echo -e "🔔\n🔔\n🔔       S E T U P       \n🔔\n🔔"
+
+      - name: ︎Setup - Checkout
+        if: inputs.checkout-enabled
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #https://github.com/actions/checkout/releases/tag/v6.0.3
+        with:
+          show-progress: false
+          fetch-depth: 0
+
+      - name: ︎Setup - Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  #https://github.com/actions/setup-java/releases/tag/v5.2.0
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: corretto
+          cache: gradle
+
+      - name: ︎Setup - Service Name - generate
+        shell: bash
+        if: ${{ !inputs.service-name }}
+        run: |
+          SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
+          echo "Generated service name: $SERVICE_NAME"
+          echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+
+      - name: ︎Setup - Service Name - input
+        shell: bash
+        if: inputs.service-name
+        run: |
+          SERVICE_NAME=${{ inputs.service-name }}
+          echo "Configured input service name: $SERVICE_NAME"
+          echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+
+      - name: ︎Setup - AWS Credentials [on master]
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b  #https://github.com/aws-actions/configure-aws-credentials/releases/tag/v6.2.0
+        with:
+          aws-access-key-id: ${{ secrets.up-aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.up-aws-secret-access-key }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: ECR setup
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419  #https://github.com/aws-actions/amazon-ecr-login/releases/tag/v2.1.5
+        id: ecr-login
+
+
+
+      - name: Build - echo
+        shell: bash
+        run: |
+          echo -e "🔔\n🔔\n🔔       B U I L D       \n🔔\n🔔"
+
+      - name: Build - Gradle
+        shell: bash
+        env:
+          GITHUB_PKG_USER: ${{ inputs.pkg-user }}
+          GITHUB_PKG_TOKEN: ${{ secrets.pkg-token }}
+        run: |
+          ${{ inputs.gradle-cmd }}
+
+      - name: Build - Gradle - Annotate Test Results
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040  #https://github.com/EnricoMi/publish-unit-test-result-action/releases/tag/v2.23.0
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        with:
+          junit_files: '**/test-results/**/*.xml'
+          comment_mode: off
+
+
+
+      - name: Build - Docker Image - echo
+        shell: bash
+        run: echo -e "🔔       D O C K E R      B U I L D"
+
+      - name: Build - Docker Image
+        shell: bash
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          DOCKER_IMAGE="$REGISTRY/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
+          docker build -t $DOCKER_IMAGE .
+          echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
+
+      - name: Release - push Docker image [on master]
+        if: github.ref == 'refs/heads/master'
+        shell: bash
+        run: docker push ${{ env.DOCKER_IMAGE }}
+
+
+
+      - name: Release - Terraform - echo
+        shell: bash
+        run: echo -e "🔔       T E R R A F O R M"
+
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
+        id: infrastructure-changes
+        with:
+          filters: |
+            terraform:
+              - "${{ inputs.terraform-module-path }}/**"
+
+      - name: Release - terraform
+        if: steps.infrastructure-changes.outputs.terraform == 'true'
+        uses: spring-media/1up-github-actions/.github/actions/deploy-infrastructure@feature/shared-workflows
+        with:
+          service-name: ${{ env.SERVICE_NAME }}
+          pkg-token: ${{ secrets.pkg-token }}
+          docker-image-tag: ${{ inputs.docker-image-tag }}
+          module-path: ${{ inputs.terraform-module-path }}
+
+
+
+      - name: Release - publish libraries [on master]
+        if: github.ref == 'refs/heads/master' && inputs.publish-libs-enabled
+        shell: bash
+        run: echo -e "🔔       P U B L I S H      L I B S"
+
+      - name: Release - publish libraries [on master]
+        if: github.ref == 'refs/heads/master' && inputs.publish-libs-enabled
+        shell: bash
+        run: ./gradlew --no-daemon --info publish
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          GITHUB_PKG_USER: ${{ inputs.pkg-user }}
+          GITHUB_PKG_TOKEN: ${{ secrets.pkg-token }}
+
+
+      - name: Release - on production - echo
+        if: github.ref == 'refs/heads/master'
+        shell: bash
+        run: echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
+
+      - name: Release - on production [on master]
+        if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
+        # noinspection MandatoryParamsAbsent
+        uses: sil-org/ecs-deploy@1d31607c5a207893b64d0c6a81dcdbd0c5eab382  #https://github.com/sil-org/ecs-deploy/releases/tag/3.10.23
+        with:
+          aws_access_key_cmd: --aws-access-key
+          aws_access_key: ${{ secrets.up-aws-access-key-id }}
+          aws_secret_key_cmd: --aws-secret-key
+          aws_secret_key: ${{ secrets.up-aws-secret-access-key }}
+          cluster_cmd: --cluster
+          cluster: ${{ inputs.aws-production-cluster }}
+          image_cmd: --image
+          image: ${{ env.DOCKER_IMAGE }}
+          region_cmd: --region
+          region: ${{ inputs.aws-region }}
+          service_name_cmd: --service-name
+          service_name: ${{ env.SERVICE_NAME }}
+          timeout_cmd: --timeout
+          timeout: 600
+
+
+
+      - name: Report - echo [on master]
+        if: github.ref == 'refs/heads/master'
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_STATUS_NAME: ${{ job.status }}
+          ACTION_STATUS_NAME: ${{ github.action_status }}
+        run: |
+          echo -e "🔔\n🔔\n🔔       R E P O R T  jos-status:$JOB_STATUS_NAME action-status:$ACTION_STATUS_NAME     \n🔔\n🔔"
+          echo '### Release Summary' >> $GITHUB_STEP_SUMMARY
+          echo '| Name         | Value                                 |' >> $GITHUB_STEP_SUMMARY
+          echo '|:-------------|:--------------------------------------|' >> $GITHUB_STEP_SUMMARY
+          echo "| Build Number | <code>${{ github.run_number }}</code> |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build SHA    | <code>${{ github.sha }}</code>        |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service Name | <code>${{ env.SERVICE_NAME }}</code>  |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Image | <code>${{ env.DOCKER_IMAGE }}</code>  |" >> $GITHUB_STEP_SUMMARY
+
+
+      - name: Report - [on master] - message prefix
+        if: github.ref == 'refs/heads/master' && inputs.service-name && !cancelled()
+        shell: bash
+        run: |
+          [[ "${{ inputs.service-name }}" = "" ]] && prefix="" || prefix="${{ inputs.service-name }} / "
+          echo "SUCCESS_PREFIX=$prefix" >> $GITHUB_ENV
+
+      - name: Report - [on master]
+        if: github.ref == 'refs/heads/master' && !cancelled()
+        uses: spring-media/1up-github-actions/.github/actions/send-notifications@feature/shared-workflows
+        with:
+          slack-webhook-url: ${{ secrets.up-slack-webhook-url }}
+          parent-job-status: ${{ github.action_status }}
+          success-prefix: ${{ env.SUCCESS_PREFIX }}
+
+  claude-pr-review:
+    if: github.event_name == 'pull_request' && inputs.claude-pr-review == true
+    uses: spring-media/ep-github-actions-shared/.github/workflows/reusable-claude-workflow.yml@main
+    with:
+      node_version: ${{ inputs.node_version }}
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      extra_env_secrets: |-
+        {
+          "NPM_AUTH_TOKEN": "${{ secrets.NPM_AUTH_TOKEN }}",
+          "GITHUB_PKG_TOKEN": "${{ secrets.GITHUB_PKG_TOKEN }}"
+        }

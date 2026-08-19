@@ -1,0 +1,93 @@
+name: 'send-notifications'
+author: '1up-team'
+description: 'Send build notifications to Slack channel'
+
+inputs:
+  slack-webhook-url:
+    description: 'Slack channel webhook URL to report to'
+    required: true
+  parent-job-status:
+    description: 'parent job status'
+    required: true
+  service-name:
+    description: 'Explicit service name in case the repository does not represent a single service (monorepo)'
+    default: ''
+    required: false
+  success-prefix:
+    description: 'Prefix text to add in the Slack message sent on success'
+    required: false
+  success-message:
+    description: 'Slack message to send on success'
+    required: false
+  failure-message:
+    description: 'Slack message to send on failure'
+    required: false
+  always-notify:
+    description: 'Override to always send notifications regardless of the current branch'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup - Validate Inputs
+      shell: bash
+      run: |
+        [[ "${{ inputs.slack-webhook-url }}" ]] || { echo "input 'slack-webhook-url' cannot be blank"; exit 1; }
+        [[ "${{ inputs.parent-job-status }}" ]] || { echo "input 'parent-job-status' cannot be blank"; exit 1; }
+
+    - name: Setup - GitHub Message Env Vars
+      if: always() && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      shell: bash
+      run: |
+        [[ "${{ inputs.service-name }}" == "" ]] \
+            && service_suffix="" \
+            || service_suffix=" / ${{ inputs.service-name }}"
+        service_name="${GITHUB_REPOSITORY##*/}$service_suffix"
+        commit_msg=$(git log -1 --pretty=format:'%s')
+        gh_pr_num=$(echo $commit_msg | sed -r 's/.*#([0-9]+).*/\1/')
+        gh_url="https://github.com/${GITHUB_REPOSITORY}"
+        gha_url="<$gh_url/actions/runs/$GITHUB_RUN_ID|$service_name>"
+        [[ "$gh_pr_num" =~ ^[0-9]+$ ]] \
+            && gh_pr_msg="<$gh_url/pull/$gh_pr_num|$commit_msg>" \
+            || gh_pr_msg="$commit_msg"
+        success_fallback="$gha_url deployed successfully! $gh_pr_msg"
+        success_msg="${{ inputs.success-message }}"
+        echo "SUCCESS_MESSAGE=${{ inputs.success-prefix }} ${success_msg:-$success_fallback}" >> $GITHUB_ENV
+        failure_fallback=":boom: $gha_url failed! $gh_pr_msg"
+        failure_msg="${{ inputs.failure-message }}"
+        echo "FAILURE_MESSAGE=${failure_msg:-$failure_fallback}" >> $GITHUB_ENV
+
+    - name: Report - success [on master]
+      if: inputs.parent-job-status == 'success' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      shell: bash
+      run: |
+        curl --no-progress-meter -X POST \
+             --header 'ContentType: application/json' \
+             --data '{
+                "attachments": [{
+                  "color": "#157979",
+                  "blocks": [{
+                    "type": "section",
+                    "text": { "type": "mrkdwn", "text": ${{ toJSON(env.SUCCESS_MESSAGE) }} }
+                  }]
+                }]
+             }' \
+            '${{ inputs.slack-webhook-url }}'
+
+    - name: Report - failure [on master]
+      if: inputs.parent-job-status == 'failure' && (github.ref == 'refs/heads/master' || inputs.always-notify == 'true')
+      shell: bash
+      run: |
+        curl --no-progress-meter -X POST \
+             --header 'ContentType: application/json' \
+             --data '{
+                "attachments": [{
+                  "color": "#C75605",
+                  "blocks": [{
+                    "type": "section",
+                    "text": { "type": "mrkdwn", "text": ${{ toJSON(env.FAILURE_MESSAGE) }} }
+                  }]
+                }]
+             }' \
+            '${{ inputs.slack-webhook-url }}'
