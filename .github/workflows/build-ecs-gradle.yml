@@ -86,7 +86,7 @@ on:
         required: false
 
 jobs:
-  build:
+  build-ecs-gradle:
     runs-on: ubuntu-latest
     steps:
       - name: Setup - echo
@@ -290,8 +290,3 @@ jobs:
       node_version: ${{ inputs.node_version }}
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      extra_env_secrets: |-
-        {
-          "NPM_AUTH_TOKEN": "${{ secrets.NPM_AUTH_TOKEN }}",
-          "GITHUB_PKG_TOKEN": "${{ secrets.GITHUB_PKG_TOKEN }}"
-        }
