@@ -277,7 +277,8 @@ jobs:
           success-prefix: ${{ env.SUCCESS_PREFIX }}
 
   claude-pr-review:
-    if: github.event_name == 'pull_request' && inputs.claude-pr-review == true
+    needs: build-ecs-gradle
+    if: always() && github.event_name == 'pull_request' && inputs.claude-pr-review == true
     permissions:
       id-token: write
       contents: write
