@@ -278,6 +278,13 @@ jobs:
 
   claude-pr-review:
     if: github.event_name == 'pull_request' && inputs.claude-pr-review == true
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+      packages: read
     uses: spring-media/ep-github-actions-shared/.github/workflows/reusable-claude-workflow.yml@main
     with:
       node_version: ${{ inputs.node_version }}
