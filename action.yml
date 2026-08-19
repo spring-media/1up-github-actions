@@ -59,6 +59,35 @@ inputs:
     required: false
     default: 'terraform'
 
+  code-review-enabled:
+    description: 'Run an automatic Claude Code review on pull requests'
+    required: false
+    default: 'false'
+  anthropic-api-key:
+    description: 'Anthropic API key used to authenticate the Claude Code review (required when code-review-enabled is true)'
+    required: false
+    default: ''
+  code-review-model:
+    description: 'Claude model used for the review (passed to Claude CLI via --model)'
+    required: false
+    default: 'claude-sonnet-4-5'
+  code-review-max-turns:
+    description: 'Cap on Claude agent turns per review. Cost guardrail against runaway loops'
+    required: false
+    default: '15'
+  code-review-track-progress:
+    description: 'Post a tracking comment that updates with review progress'
+    required: false
+    default: 'true'
+  code-review-prompt:
+    description: 'Custom review prompt. When empty a sensible default review prompt is used'
+    required: false
+    default: ''
+  code-review-claude-args:
+    description: 'Additional CLI args forwarded to Claude Code (e.g. --allowedTools ...)'
+    required: false
+    default: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"'
+
 runs:
   using: composite
   steps:
@@ -82,6 +111,84 @@ runs:
       with:
         show-progress: false
         fetch-depth: 0
+
+    - name: Code Review - echo
+      if: inputs.code-review-enabled == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      run: echo -e "🔔\n🔔\n🔔       C L A U D E   C O D E   R E V I E W       \n🔔\n🔔"
+
+    - name: Code Review - Validate Inputs
+      if: inputs.code-review-enabled == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        [[ "${{ inputs.anthropic-api-key }}" ]] || { echo "input 'anthropic-api-key' cannot be blank when code-review-enabled is true"; exit 1; }
+
+    - name: Code Review - Build prompt
+      id: code-review-prompt
+      if: inputs.code-review-enabled == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        CUSTOM_PROMPT: ${{ inputs.code-review-prompt }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        {
+          echo 'value<<CLAUDE_PROMPT_EOF'
+          if [[ -n "$CUSTOM_PROMPT" ]]; then
+            printf '%s\n' "$CUSTOM_PROMPT"
+          else
+            cat <<EOF
+        REPO: ${REPO}
+        PR NUMBER: ${PR_NUMBER}
+
+        Please review this pull request with a focus on:
+        - Code quality and best practices
+        - Potential bugs or logic errors
+        - Security implications
+        - Performance considerations
+
+        Note: The PR branch is already checked out in the current working directory.
+
+        Use \`gh pr comment\` for top-level feedback.
+        Use \`mcp__github_inline_comment__create_inline_comment\` (with \`confirmed: true\`) to highlight specific code issues.
+        Only post GitHub comments - don't submit review text as messages.
+        EOF
+          fi
+          echo 'CLAUDE_PROMPT_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Code Review - Build claude args
+      id: code-review-args
+      if: inputs.code-review-enabled == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        BASE_ARGS: ${{ inputs.code-review-claude-args }}
+        MODEL: ${{ inputs.code-review-model }}
+        MAX_TURNS: ${{ inputs.code-review-max-turns }}
+      run: |
+        ARGS="$BASE_ARGS"
+        if [[ -n "$MODEL" ]]; then
+          ARGS="$ARGS --model $MODEL"
+        fi
+        if [[ -n "$MAX_TURNS" ]]; then
+          ARGS="$ARGS --max-turns $MAX_TURNS"
+        fi
+        {
+          echo 'value<<CLAUDE_ARGS_EOF'
+          printf '%s\n' "$ARGS"
+          echo 'CLAUDE_ARGS_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Code Review - Claude Code
+      if: inputs.code-review-enabled == 'true' && github.event_name == 'pull_request'
+      continue-on-error: true
+      uses: anthropics/claude-code-action@d40ddef4c030e508327d6e35a9c45f3368482c50  #https://github.com/anthropics/claude-code-action/releases/tag/v1
+      with:
+        anthropic_api_key: ${{ inputs.anthropic-api-key }}
+        github_token: ${{ github.token }}
+        track_progress: ${{ inputs.code-review-track-progress }}
+        prompt: ${{ steps.code-review-prompt.outputs.value }}
+        claude_args: ${{ steps.code-review-args.outputs.value }}
 
     - name: ︎Setup - Java
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  #https://github.com/actions/setup-java/releases/tag/v5.2.0
