@@ -107,6 +107,7 @@ runs:
       if: steps.infrastructure-changes.outputs.terraform == 'true'
       uses: spring-media/1up-github-actions@deploy-infrastructure
       with:
+        main-branch: ${{ inputs.main-branch }}
         service-name: ${{ env.SERVICE_NAME }}
         pkg-token: ${{ inputs.pkg-token }}
         docker-image-tag: ${{ inputs.docker-image-tag }}
