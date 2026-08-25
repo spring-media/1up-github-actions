@@ -3,6 +3,11 @@ author: '1up-team'
 description: 'Plan/deploy Terraform stacks'
 
 inputs:
+  main-branch:
+    description: 'Main git branch name where to trigger the docker image and ecs-deploy steps'
+    required: false
+    default: 'master'
+
   service-name:
     description: 'Used to derive Terraform state file on backend: ecs_service_{service-name}'
     required: true
@@ -53,6 +58,8 @@ runs:
         fi
         echo "paths_json = $paths_json"
         echo "PATHS_JSON=$paths_json" >> $GITHUB_ENV
+        MAIN_BR_REF="refs/heads/${{ inputs.main-branch }}"
+        echo "MAIN_BR_REF=$MAIN_BR_REF" >> $GITHUB_ENV
 
     - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
@@ -79,7 +86,7 @@ runs:
     - name: Release - on production - echo [on master]
       if: |
         (steps.infrastructure-changes.outputs.found == 'true'  || inputs.force-apply == 'true')
-        && github.ref == 'refs/heads/master'
+        && github.ref == env.MAIN_BR_REF
       shell: bash
       run: |
         echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
@@ -105,7 +112,7 @@ runs:
     - name: Release - on production - terraform - find PR number [on master]
       if: |
         (steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true')
-        && github.ref != 'refs/heads/master'
+        && github.ref != env.MAIN_BR_REF
       uses: jwalton/gh-find-current-pr@f3d61b485d2801773f7a07b2aaa3306bd8f8e653  #https://github.com/jwalton/gh-find-current-pr/releases/tag/v1.3.5
       id: find-pr
       with:
@@ -114,7 +121,7 @@ runs:
     - name: Release - on production - terraform - add plan to PR [on master]
       if: |
         (steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true')
-        && github.ref != 'refs/heads/master'
+        && github.ref != env.MAIN_BR_REF
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  #https://github.com/actions/github-script/releases/tag/v9.0.0
       env:
         PULL_REQ_NUMBER: ${{ steps.find-pr.outputs.pr }}
@@ -169,7 +176,7 @@ runs:
     - name: Release - on production - terraform apply [on master]
       if: |
         (steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true') 
-        && github.ref == 'refs/heads/master'
+        && github.ref == env.MAIN_BR_REF
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
