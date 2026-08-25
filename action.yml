@@ -3,6 +3,11 @@ author: '1up-team'
 description: 'Action to build and release Nodejs & ECS repositories'
 
 inputs:
+  main_br:
+    description: 'Main git branch name where to trigger the docker image and ecs-deploy steps'
+    required: false
+    default: 'master'
+
   pkg-token:
     description: 'User token used to integrate with the spring-media GitHub packages for internal libs'
     required: true
@@ -60,9 +65,11 @@ runs:
     - name: Setup service name
       run: |
         SERVICE_NAME=${{ inputs.service-name }}
+        MAIN_BR_REF="refs/heads/${{ inputs.main_br }}"
         [[ "${SERVICE_NAME}" ]] || SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
         echo "Service name: $SERVICE_NAME"
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
+        echo "MAIN_BR_REF=$MAIN_BR_REF" >> $GITHUB_ENV
       shell: bash
 
     - name: ︎Setup - AWS Credentials
@@ -85,7 +92,7 @@ runs:
 
     - name: Docker - push image
       shell: bash
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == env.MAIN_BR_REF
       run: |
         docker push ${{ env.DOCKER_IMAGE }}
 
@@ -106,7 +113,8 @@ runs:
         module-path: ${{ inputs.terraform-module-path }}
 
     - name: Release - [on master]
-      if: github.ref == 'refs/heads/master' && steps.infrastructure-changes.outputs.terraform == 'false'
+      if: github.ref == env.MAIN_BR_REF && steps.infrastructure-changes.outputs.terraform == 'false'
+      # noinspection MandatoryParamsAbsent
       uses: sil-org/ecs-deploy@1d31607c5a207893b64d0c6a81dcdbd0c5eab382  #https://github.com/sil-org/ecs-deploy/releases/tag/3.10.23
       with:
         aws_access_key_cmd: '--aws-access-key'
@@ -123,7 +131,6 @@ runs:
         service_name: ${{ env.SERVICE_NAME }}
         timeout_cmd: '--timeout'
         timeout: '600'
-        profile: ''
 
     - name: Report - [on master]
       if: always()
