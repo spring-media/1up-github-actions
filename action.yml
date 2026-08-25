@@ -3,7 +3,7 @@ author: '1up-team'
 description: 'Action to build and release Nodejs & ECS repositories'
 
 inputs:
-  main_br:
+  main-branch:
     description: 'Main git branch name where to trigger the docker image and ecs-deploy steps'
     required: false
     default: 'master'
@@ -65,7 +65,7 @@ runs:
     - name: Setup service name
       run: |
         SERVICE_NAME=${{ inputs.service-name }}
-        MAIN_BR_REF="refs/heads/${{ inputs.main_br }}"
+        MAIN_BR_REF="refs/heads/${{ inputs.main-branch }}"
         [[ "${SERVICE_NAME}" ]] || SERVICE_NAME=${GITHUB_REPOSITORY##*/1up-}
         echo "Service name: $SERVICE_NAME"
         echo "SERVICE_NAME=$SERVICE_NAME" >> $GITHUB_ENV
