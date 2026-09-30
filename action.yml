@@ -17,6 +17,11 @@ inputs:
     required: false
     default: 'b${{ github.run_number }}-${{ github.sha }}'
 
+  docker-build-cmd:
+    description: 'Command to run for building the Docker image'
+    required: false
+    default: 'docker build -t $DOCKER_IMAGE .'
+
   aws-region:
     description: 'AWS region used to deploy the infrastructure and push the docker image'
     required: false
@@ -87,7 +92,7 @@ runs:
       working-directory: ${{ inputs.app-path }}
       run: |
         DOCKER_IMAGE="933782373565.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
-        docker build -t $DOCKER_IMAGE .
+        ${{ inputs.docker-build-cmd }}
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
 
     - name: Docker - push image
