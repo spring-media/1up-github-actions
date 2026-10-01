@@ -92,7 +92,7 @@ runs:
       working-directory: ${{ inputs.app-path }}
       run: |
         DOCKER_IMAGE="933782373565.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ env.SERVICE_NAME }}:${{ inputs.docker-image-tag }}"
-        ${{ inputs.docker-build-cmd }}
+        DOCKER_IMAGE=$DOCKER_IMAGE ${{ inputs.docker-build-cmd }}
         echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_ENV
 
     - name: Docker - push image
