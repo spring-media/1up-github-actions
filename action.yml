@@ -110,7 +110,7 @@ runs:
 
     - name: deploy infrastructure
       if: steps.infrastructure-changes.outputs.terraform == 'true'
-      uses: spring-media/1up-github-actions@deploy-infrastructure
+      uses: spring-media/1up-github-actions@deploy-tf
       with:
         main-branch: ${{ inputs.main-branch }}
         service-name: ${{ env.SERVICE_NAME }}
