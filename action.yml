@@ -1,4 +1,4 @@
-name: 'deploy-infrastructure'
+name: 'deploy-tf'
 author: '1up-team'
 description: 'Plan/deploy Terraform stacks'
 
@@ -45,7 +45,6 @@ runs:
       shell: bash
       run: |
         [[ "${{ inputs.service-name }}" ]] || { echo "input 'service-name' cannot be blank"; exit 1; }
-        [[ "${{ inputs.pkg-token }}" ]] || { echo "input 'pkg-token' cannot be blank"; exit 1; }
         paths_json="[ \"${{ inputs.module-path }}/**\" ]"
         if [[ "${{ inputs.paths }}" != "" ]]; then
           paths=(${{ inputs.paths }})
@@ -67,29 +66,28 @@ runs:
         filters: |
           found: ${{ env.PATHS_JSON }}
 
-    - name: Setup - terraform
+    - name: Setup - Terraform
       if: steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true'
       uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  #https://github.com/hashicorp/setup-terraform/releases/tag/v4.0.1
       with:
         terraform_version: "1.14.9"
 
-    - name: Setup - terraform - git
+    - name: Setup - 1up-infrastructure-ecs - Terraform modules
       if: steps.infrastructure-changes.outputs.found == 'true' || inputs.force-apply == 'true'
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #https://github.com/actions/checkout/releases/tag/v6.0.3
+      with:
+        repository: 'spring-media/1up-infrastructure-ecs'
+        ref: 'master'
+        show-progress: false
+        fetch-depth: 0
+        path: '${{ inputs.module-path }}/1up-infrastructure-ecs'
+        token: ${{ inputs.pkg-token }}
+    - name: Setup - 1up-infrastructure-ecs - relative module source paths
       shell: bash
+      # on macOS, use sed -i '' '...'
       run: |
-        git config --local --remove-section http."https://github.com/" || true
-        git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media".insteadOf "https://github.com/spring-media"
-        git config --global url."https://${{ inputs.pkg-token }}@github.com/spring-media/1up-infrastructure-ecs.git".insteadOf "https://1up-infrastructure-ecs"
-
-
-
-    - name: Release - on production - echo [on master]
-      if: |
-        (steps.infrastructure-changes.outputs.found == 'true'  || inputs.force-apply == 'true')
-        && github.ref == env.MAIN_BR_REF
-      shell: bash
-      run: |
-        echo -e "🔔\n🔔       R E L E A S E      P R O D       \n🔔"
+        find '${{ inputs.module-path }}' -type f -name '*.tf' -exec \
+          sed -i 's|source.*1up-infrastructure-ecs|source = "./1up-infrastructure-ecs|g' {} +
 
     - name: Release - on production - terraform validate and plan
       if: steps.infrastructure-changes.outputs.found == 'true'
@@ -98,7 +96,7 @@ runs:
         rm -rf .terraform.lock.hcl .terraform/terraform.tfstate || true
         terraform init
         terraform validate
-        terraform plan -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
+        terraform plan -var 'revision=${{ inputs.docker-image-tag }}' -out tfplan
       shell: bash
 
     - name: Release - on production - terraform plan
@@ -180,4 +178,4 @@ runs:
       working-directory: ${{ inputs.module-path }}
       shell: bash
       run: |
-        terraform apply -var 'environment=production' -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
+        terraform apply -var 'revision=${{ inputs.docker-image-tag }}' -auto-approve
