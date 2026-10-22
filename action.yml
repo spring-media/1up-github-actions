@@ -94,9 +94,8 @@ runs:
       shell: bash
       # on macOS, use sed -i '' '...'
       run: |
-        find '${{ inputs.module-path }}/../' -name '*.tf' || true
-        find '${{ inputs.module-path }}/../' -type f -name '*.tf' -exec sed -i 's|source.*".*1up-infrastructure-ecs|source = "./1up-infrastructure-ecs|g' {} \;
-        grep -e 'source.*1up-infrastructure-ecs' ${{ inputs.module-path }}/../**/*.tf || true
+        find '${{ inputs.module-path }}/../' -type f -name '*.tf' -exec sed -u -i 's|source.*".*1up-infrastructure-ecs|source = "./1up-infrastructure-ecs|g' {} \;
+        sleep 2
 
     - name: Release - on production - terraform validate and plan
       if: steps.infrastructure-changes.outputs.found == 'true'
