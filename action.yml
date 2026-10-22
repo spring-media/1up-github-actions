@@ -18,6 +18,9 @@ inputs:
   paths:
     description: 'Space-delimited relative dir paths that contain Terraform-related files (no end "/")'
     required: false
+  checkout-module-path:
+    description: 'Relative dir path where to checkout 1up-infrastructure-ecs. Defaults to inputs.module-path.'
+    required: false
 
   pkg-token:
     description: 'spring-media GitHub packages token. Used for calling the GitHub API and by Terraform for cloning 1up-infrastructure modules'
@@ -59,6 +62,11 @@ runs:
         echo "PATHS_JSON=$paths_json" >> $GITHUB_ENV
         MAIN_BR_REF="refs/heads/${{ inputs.main-branch }}"
         echo "MAIN_BR_REF=$MAIN_BR_REF" >> $GITHUB_ENV
+        GITCO_MOD_PATH=${{ inputs.checkout-module-path }}
+        if [[ "$GITCO_MOD_PATH" == "" ]]; then
+          GITCO_MOD_PATH=${{ inputs.module-path }}
+        fi
+        echo "GITCO_MOD_PATH=$GITCO_MOD_PATH" >> $GITHUB_ENV
 
     - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  #https://github.com/dorny/paths-filter/releases/tag/v4.0.1
       id: infrastructure-changes
@@ -80,14 +88,15 @@ runs:
         ref: 'master'
         show-progress: false
         fetch-depth: 0
-        path: '${{ inputs.module-path }}/1up-infrastructure-ecs'
+        path: '${{ env.GITCO_MOD_PATH }}/1up-infrastructure-ecs'
         token: ${{ inputs.pkg-token }}
     - name: Setup - 1up-infrastructure-ecs - relative module source paths
       shell: bash
       # on macOS, use sed -i '' '...'
       run: |
-        find '${{ inputs.module-path }}' -type f -name '*.tf' -exec \
-          sed -i 's|source.*1up-infrastructure-ecs|source = "./1up-infrastructure-ecs|g' {} +
+        find '${{ inputs.module-path }}/../' -name '*.tf' || true
+        find '${{ inputs.module-path }}/../' -type f -name '*.tf' -exec sed -i 's|source.*".*1up-infrastructure-ecs|source = "./1up-infrastructure-ecs|g' {} \;
+        grep -e 'source.*1up-infrastructure-ecs' ${{ inputs.module-path }}/../**/*.tf || true
 
     - name: Release - on production - terraform validate and plan
       if: steps.infrastructure-changes.outputs.found == 'true'
